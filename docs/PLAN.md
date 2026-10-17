@@ -265,6 +265,15 @@ byte for byte (the Java heap's SHA-256). There the window had run two
 frames before the Lua script began (302 for the script's 300); the movie
 drove those frames too, so this is when the script attaches, not the core.
 
+## 2026-10-17 - published (user-decided, 2026-10-17)
+
+The owner: "Publish. The usual: readme, tools/ page, discord hook,
+nightly/dev releases". The repository is public at
+ToolAssisted-run/chimera-core-freej2me; CI builds it from a fresh clone
+(OpenJDK included) and publishes through Chimera's publish-core workflow.
+Chimera issue #297 asked for two cores, openDoJa and FreeJ2ME-Plus; this
+is the second, and no DoJa game has been tried, so the issue stays open.
+
 ## Not done
 
 - **Games** were run to their menus and a little further (above); none

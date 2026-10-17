@@ -9,7 +9,9 @@ frontend for tool-assisted speedruns, for **J2ME games**: the Java games of
 
 ## Status
 
-New, and not published yet.
+Published: each push to `main` that passes the tests publishes a `dev`
+release, and a dated nightly is made once a day when `main` moved. Chimera's
+Core Manager lists it.
 
 - The core's own test MIDlet runs in the sandbox with its keys, touch
   screen, text, record store and sound (MIDI music, tones and WAV sound
