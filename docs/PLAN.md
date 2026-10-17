@@ -395,6 +395,29 @@ soundfont that is not one, a frame limit of 1).
 `box:resume` now compares the lag frames since the load: the runner counts
 them from its own start, so a resumed run's running total starts at 0.
 
+## 2026-10-17 - music changing seconds late in EDGE EX (chimera#305)
+
+A user reported that in EDGE EX (Nokia 5800 build) the old music kept
+playing for a few seconds after a new level or the main menu started. With
+the game (the owner's copy) and the user's own project, replayed on the build
+they used (8fbf7c48) and on the one with the synthesizer's jitter correction
+off (371dae77, above), through a copy of the sandbox runner that prints each
+MIDI player's start and stop with its frame:
+
+- The game asks for its tunes at the same frames on both builds (157, 593,
+  2020, 3171, 6289 in that run): it stops, deallocates and closes the old
+  player, then creates, realizes, prefetches and starts the new one.
+- On 8fbf7c48 every tune is heard 355 to 357 frames (about 6 seconds) late,
+  for the whole run: the recording matches the 371dae77 one shifted by that
+  much (correlation 0.99 and above), and the old tune is what sounds in
+  between.
+- On 371dae77 each tune is heard within 2 frames of the game asking.
+
+So the jitter correction delayed the sound by far more here than with the
+test MIDlet (0.4 s): the delay it builds up depends on what the game does
+while it runs. No change was needed beyond 371dae77; `j2me:sound-start`
+holds the start of a tune to 10 frames. The game is not in the repository.
+
 ## Not done
 
 - **Games** were run to their menus and a little further (above); none
