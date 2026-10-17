@@ -191,6 +191,8 @@ jobs:
           path: |
             gate.out
             window.out
+            build/guest/*.log
+            build/jdk/configure-support/config.log
 
   publish:
     # What passed above, published as this core's own release: a rolling `dev`

@@ -45,6 +45,17 @@ if [ ! -d "$g/kernel-include/linux" ]; then
 	if [ -d "$kin/x86_64-linux-gnu/asm" ]; then cp -R "$kin/x86_64-linux-gnu/asm" "$g/kernel-include/"; else cp -R "$kin/asm" "$g/kernel-include/"; fi
 fi
 
+# logged <log> <command...>: runs it with its output in the log, and on a
+# failure shows the log's end (a runner keeps nothing else)
+logged() {
+	lg_log="$1"; shift
+	if ! "$@" > "$lg_log" 2>&1; then
+		echo "failed: $* (the end of $lg_log:)" >&2
+		tail -40 "$lg_log" >&2
+		exit 1
+	fi
+}
+
 gcc_guest="gcc -specs=$sr/lib/musl-gcc.specs -mcmodel=large -mno-red-zone -mstack-protector-guard=global -fno-stack-protector -fno-pic -fno-pie -fcf-protection=none"
 
 # libffi, from its git tree (autogen.sh makes its configure)
@@ -52,11 +63,11 @@ if [ ! -f "$g/libffi/lib/libffi.a" ]; then
 	rm -rf "$g/libffi-src" "$g/libffi-build"
 	mkdir -p "$g/libffi-src" "$g/libffi-build"
 	(cd "$root/extern/libffi" && git archive HEAD) | tar -x -C "$g/libffi-src"
-	(cd "$g/libffi-src" && ./autogen.sh > "$g/libffi-autogen.log" 2>&1)
-	(cd "$g/libffi-build" && "$g/libffi-src/configure" --host=x86_64-linux-musl --build=x86_64-pc-linux-gnu \
-		--prefix="$g/libffi" --disable-shared --enable-static --disable-exec-static-tramp --disable-docs \
-		--with-pic=no CC="$gcc_guest -O2" CFLAGS= > "$g/libffi-configure.log" 2>&1)
-	make -C "$g/libffi-build" -j "$jobs" install > "$g/libffi-make.log" 2>&1
+	(cd "$g/libffi-src" && logged "$g/libffi-autogen.log" ./autogen.sh)
+	(cd "$g/libffi-build" && logged "$g/libffi-configure.log" "$g/libffi-src/configure" --host=x86_64-linux-musl \
+		--build=x86_64-pc-linux-gnu --prefix="$g/libffi" --disable-shared --enable-static --disable-exec-static-tramp \
+		--disable-docs --with-pic=no CC="$gcc_guest -O2" CFLAGS=)
+	logged "$g/libffi-make.log" make -C "$g/libffi-build" -j "$jobs" install
 fi
 
 # HotSpot and the native libraries
