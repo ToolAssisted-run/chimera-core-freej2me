@@ -5,8 +5,9 @@ that runs in Chimera on Linux and on Windows.
 
 ## What is needed
 
-- GCC 13 or newer (C and C++), make, git, python3, zip, autoconf, automake
-  and libtool (for libffi).
+- GCC 13 or newer (C and C++), make, git, python3, zip, and for libffi
+  autoconf, automake, libtool and libltdl-dev (its `autogen.sh` uses a macro
+  of libltdl's, `LT_SYS_SYMBOL_USCORE`).
 - A JDK 21 to build OpenJDK with (the "boot JDK"; Debian's
   openjdk-21-jdk-headless). `BOOT_JDK` names it when it is not the one on
   the PATH.
