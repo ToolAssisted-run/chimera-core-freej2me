@@ -13,9 +13,11 @@
 # build/bin/run-wbx (build-guest.sh), build/bin/run-native
 # (build-native.sh), and the test MIDlet (tests/midlet/build.sh).
 #
-# WHAT RUNS WITH NO FILES OF YOURS: everything. The test MIDlet
-# (tests/midlet) is this repository's own: a square moved by the keys, a
-# timer, text, a record store, a touch mark, a MIDI tune, a tone and a beep.
+# WHAT RUNS WITH NO FILES OF YOURS: everything but the game: tests. The test
+# MIDlet (tests/midlet) is this repository's own: a square moved by the
+# keys, a timer, text, a record store, a touch mark, a MIDI tune, a tone and
+# a beep. The game: tests run five commercial games where tests/games-local
+# (or GAMES_DIR) has them, named and checked by SHA-1, and SKIP elsewhere.
 #
 # Written against the ways a test passes on a broken thing (Chimera's
 # docs/gates.md): a machine that did nothing agrees with itself, so a run is
@@ -107,7 +109,8 @@ check "source:patched" "the three submodules are at their pinned commits, with t
 	sh -c "sh '$here/apply-patches.sh' > '$work/patches.log' 2>&1 && [ $pins = 1 ]"
 
 stale=""
-for src in "$here"/*.c "$here"/*.h "$here"/pack.S "$root"/patches/*/*.patch $(find "$root/java" -name '*.java'); do
+for src in "$here"/core.c "$here"/driver.c "$here"/driver.h "$here"/guest-shims.c "$here"/memfs.c "$here"/memfs.h "$here"/pack.S \
+	"$root"/patches/*/*.patch $(find "$root/java" -name '*.java'); do
 	[ -e "$src" ] || continue
 	[ "$core" -nt "$src" ] || stale="$stale $(basename "$src")"
 done
@@ -177,9 +180,55 @@ check "box:rerecord" "saved and loaded around every frame, the run is the straig
 box ss t $play --state-hash --session
 check "box:session" "saved at frame 150 and loaded into a new host, the run is the straight run: every report and the state at the end" \
 	same "$work/a.out" "$work/ss.out"
+# shellcheck disable=SC2086
+box sv t $play --save-at 150 "$work/at150.state"
+# shellcheck disable=SC2086
+box rs t $play --resume "$work/at150.state" 150 --state-hash
+awk '$1 == "state" || ($1 == "frame" && $2 > 150)' "$work/a.out" > "$work/a-after150.out"
+check "box:resume" "a state written to a file before frame 150 and loaded by another process: the reports from there and the state at the end are the straight run's" \
+	cond '[ "$(lines "$work/rs.out")" = 15 ] && same "$work/a-after150.out" "$work/rs.out"'
 box rw t --frames 300 --report 5 --press "$right":60:30 --press "$fire":70:1 --rewind
 check "box:rewind" "a state kept at frame 150 and loaded at 225: the frames after the load repeat those after the save" \
 	repeats "$work/rw.out" 150 225 75 5
+
+# ------------------------------------------------- games, where they are
+# Commercial games are not in the repository; these run where
+# tests/games-local holds the named files (GAMES_DIR names another folder),
+# and say SKIP where it does not. Each is named and checked by its SHA-1.
+games="${GAMES_DIR:-$root/tests/games-local}"
+game() { # <file> <sha1>: the game's path, or nothing if it is not there as named
+	[ -f "$games/$1" ] && [ "$(sha1sum < "$games/$1" | cut -c1-40)" = "$2" ] && echo "$games/$1"
+}
+for g in "Angry_Birds.jar 4cbb0ee80a3801fef8dcf0fdfda4489662fea9e0 angry-birds" \
+	"BaldursGate.jar 85d26a4e06ba1c9f4545c78ee0e186ef72e1422e baldurs-gate" \
+	"Cars2.jar 1ed2c3495846bc7c404089dbc03d309d77f34d9b cars-2" \
+	"GameofLife.jar 5304706d7495deb6e60a1c2b21d41cd953dbd576 game-of-life"; do
+	gfile="${g%% *}"; rest="${g#* }"; gsha="${rest%% *}"; gname="${rest#* }"
+	f="$(game "$gfile" "$gsha")"
+	if [ -n "$f" ]; then
+		folder "$gname" '{}' "$f"
+		box "$gname" "$gname" --frames 900 --report 150 --press "$fire":300:3 --press "$fire":450:3 --press "$fire":600:3 --press "$fire":750:3
+		gout="$work/$gname.out"
+		check "game:$gname" "$gfile starts and draws: $(lines "$gout") reports in 900 frames, $(pictures "$gout") different pictures" \
+			cond '[ "$(lines "$gout")" = 6 ] && [ "$(pictures "$gout")" -ge 4 ]'
+	else
+		report "game:$gname" SKIP "$gfile (sha1 $gsha) is not in $games"
+	fi
+done
+f="$(game Doom.jar 7955b75a4bfd83593938fcf3006a9fa220909666)"
+if [ -n "$f" ]; then
+	folder doom '{}' "$f"
+	# Fire answers its sound question, starts a game and turns its pages
+	doom="--frames 1800 --report 30 --press $fire:960:3 --press $fire:1200:3 --press $fire:1350:3 --press $fire:1500:3"
+	# shellcheck disable=SC2086
+	box doom-a doom $doom --state-hash
+	# shellcheck disable=SC2086
+	box doom-rr doom $doom --state-hash --rerecord
+	check "game:doom-rpg" "Doom RPG (Doom.jar) starts and plays its music once sound is chosen ($(pictures "$work/doom-a.out") pictures, $(sounds "$work/doom-a.out") sounds in 60 reports), and saved and loaded around every one of 1800 frames it is the straight run: every report and the state at the end" \
+		cond '[ "$(lines "$work/doom-a.out")" = 60 ] && [ "$(pictures "$work/doom-a.out")" -ge 10 ] && [ "$(sounds "$work/doom-a.out")" -ge 10 ] && same "$work/doom-a.out" "$work/doom-rr.out"'
+else
+	report "game:doom-rpg" SKIP "Doom.jar (sha1 7955b75a4bfd83593938fcf3006a9fa220909666) is not in $games"
+fi
 
 # ------------------------------------------------- refusals
 folder none '{}'

@@ -126,7 +126,8 @@ On this machine (WSL2, 20 threads), with the test MIDlet:
   270 MB.
 - A state after 300 frames: 14 MB.
 - The test script (`run-gate.sh`): 17 passed, 0 failed, 0 skipped, with
-  CHIMERA_ROOT set (`source:patched` needs the first commit to pass).
+  CHIMERA_ROOT set, once committed. With the games and `box:resume` added
+  later the same day: 23 passed, 0 failed, 0 skipped.
 - Chimera's contract tests on the package: 20 passed, 0 failed.
 
 The sound was checked by measuring it: the dominant pitch of the test
@@ -154,9 +155,59 @@ which made the spike's runs differ, no longer makes this core's differ
 either: the VM's start-up, where the spike's leaked values landed, is now
 before the seal. Their comparison is the one `box:session` failed with.
 
+## 2026-10-17 - Windows, and Chimera's own runner
+
+The package in Chimera's headless runner (`chimera-run`, Chimera 1dae12a
+with miniBox c0aad51) plays a project of the test MIDlet with presses to
+the same picture as `run-wbx` (the project's row N is the runner's frame
+N + 1), on Linux and on Windows 11 (the Windows build of the same runner,
+run through WSL from %TEMP%\chimera-freej2me): the pictures at frames 120
+and 299 are identical between the two systems, and so is the picture after
+`chimera-run --rerecord` (a state saved and loaded around every frame).
+
+Open: `chimera-run --state` with a state saved at frame 150 by
+`--save-state` follows the straight run for 60 frames and then departs
+from it, on Linux and on Windows. Saving does not disturb the run (the
+straight run with and without the save is the same, and two saves are the
+same file), and `run-wbx --resume` from a state file in another process is
+identical to the end (the test `box:resume`), as are the baselines two
+processes seal. So the difference is in how that runner continues after
+loading, and is not yet understood.
+
+## 2026-10-17 - the first games
+
+The owner gave five games (kept outside the repository, in
+`tests/games-local`; the test script names each by SHA-1 and says SKIP
+without it). All five start with the default settings (240x320, Nokia keys)
+and draw correctly to their menus:
+
+- **Angry Birds** (Rovio, MIDP 2.0): through its logos, language and menu
+  to level 1, with its music. In the level two small rectangles are drawn
+  plain white beside the slingshot; the native runner draws them the same,
+  so it is not the sandbox: FreeJ2ME, or this runtime. Not traced.
+- **Baldur's Gate** (Sorrent, MIDP 1.0): its loading form and title menu.
+- **Cars 2** (Disney, MIDP 2.0): logos, its sound question, the title and
+  the player name screen, with sound.
+- **Doom RPG** (JAMDAT, MIDP 2.0; this file is a Russian build, made for
+  176x208, which it draws in the corner of 240x320): logos, its sound
+  question, the menu, loading and the story pages, with music from the
+  moment sound is chosen. Two runs, savestates around every one of 1800
+  frames (26 seconds), a new host from frame 900 and another process from
+  frame 900 all end in the same 27 MB state with the same 60 reports.
+- **The Game of Life** (Glu, MIDP 2.0): its logos and licence screens.
+
+Speed: 900 frames in 7 to 10 seconds for each (8 to 11 ms a frame, on this
+machine), so faster than the phone ran them. No game was played for long:
+what happens deeper in each is not known.
+
+The game: tests were seen to fail with a core whose picture never changed
+after the first frame; `box:resume` with a value kept in no state drawn
+into the picture.
+
 ## Not done
 
-- **No game has been run.** The owner will provide test games.
+- **Games** were run to their menus and a little further (above); none
+  was played through.
 - **DoJa (i-appli)** games need a Japanese font, and Shift_JIS chosen before
   the VM starts; Text Encoding does the second.
 - **Save data**: FreeJ2ME's record stores are in the machine's memory and in
@@ -164,7 +215,8 @@ before the seal. Their comparison is the one `box:session` failed with.
   from saved data.
 - **Memory**: no memory domain is shown, so RAM Watch and RAM Search have
   nothing; the Java heap is the candidate.
-- **Windows** has not been tried, nor CI.
+- **Windows** was tried in Chimera's headless runner only, not in its
+  window; CI has not run.
 - At start-up something in the JDK asks for a socket (IPv4, stream), which
   the sandbox refuses and says so once; not traced yet.
 - FreeJ2ME's rotation and its compatibility and speed settings are not

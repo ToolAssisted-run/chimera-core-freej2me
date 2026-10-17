@@ -16,8 +16,10 @@
  *                              NAME "bus:ADDRESS:LENGTH" is a part of the bus
  *          --poke ADDRESS:LENGTH:VALUE:FIRST:N  write VALUE to LENGTH bytes
  *                              of the bus before each of N frames from FIRST
- *          --vid-out FILE      the last picture: "W H\n" then BGRA rows
+ *          --vid-out FILE      the last picture: "W H\n" then BGRA rows; a FILE
+ *                              with %ld in it gets a picture at every report
  *          --aud-out FILE      all the sound, 16-bit stereo samples
+ *          --first N           start at frame N (run-wbx's --resume)
  *          --savedata-out DIR  the game's save data after the run, a file each
  * SPDX-License-Identifier: MIT
  */
@@ -68,6 +70,7 @@ struct gate_opts
 {
 	long frames;
 	long report;
+	long first;
 	int presses;
 	struct { int index; long first, count; } press[GATE_MAX_PRESS];
 	int axes;
@@ -96,6 +99,7 @@ static int gate_parse_opts(int argc, char **argv, int first, struct gate_opts *o
 	memset(o, 0, sizeof *o);
 	o->frames = 60;
 	o->report = 10;
+	o->first = 1;
 	for (int i = first; i < argc; i++)
 	{
 		if (!strcmp(argv[i], "--frames") && i + 1 < argc) o->frames = strtol(argv[++i], 0, 0);
@@ -148,6 +152,7 @@ static int gate_parse_opts(int argc, char **argv, int first, struct gate_opts *o
 		else if (!strcmp(argv[i], "--dump-domain") && i + 2 < argc) { o->dumpDomain = argv[++i]; o->dumpPath = argv[++i]; }
 		else if (!strcmp(argv[i], "--vid-out") && i + 1 < argc) o->vidOut = argv[++i];
 		else if (!strcmp(argv[i], "--aud-out") && i + 1 < argc) o->audOut = argv[++i];
+		else if (!strcmp(argv[i], "--first") && i + 1 < argc) o->first = strtol(argv[++i], 0, 0);
 		else if (!strcmp(argv[i], "--savedata-out") && i + 1 < argc) o->savedataOut = argv[++i];
 		else if (!strcmp(argv[i], "--rerecord") || !strcmp(argv[i], "--session") || !strcmp(argv[i], "--rewind")) ; /* run-wbx's */
 		else
@@ -233,7 +238,7 @@ static int gate_run(const struct gate_core *c, const struct gate_opts *o)
 	uint8_t held[GATE_MAX_BUTTONS] = {0};
 	long lag = 0;
 	FILE *aud = o->audOut ? fopen(o->audOut, "wb") : NULL;
-	for (long f = 1; f <= o->frames; f++)
+	for (long f = o->first; f <= o->frames; f++)
 	{
 		if (c->pre_frame) c->pre_frame();
 		if (o->exercise) gate_exercise(c, f, held);
@@ -274,6 +279,13 @@ static int gate_run(const struct gate_core *c, const struct gate_opts *o)
 			int w, h, n;
 			const uint32_t *v = c->video(&w, &h);
 			const int16_t *a = c->audio(&n);
+			if (o->vidOut && strstr(o->vidOut, "%ld"))
+			{
+				char path[1024];
+				snprintf(path, sizeof path, o->vidOut, f);
+				FILE *vf = fopen(path, "wb");
+				if (vf) { fprintf(vf, "%d %d\n", w, h); fwrite(v, 4, (size_t)w * h, vf); fclose(vf); }
+			}
 			printf("frame %5ld ram %016" PRIx64 " vid %dx%d %016" PRIx64 " aud %d %016" PRIx64 " lag %ld\n", f,
 			       gate_ram_hash(c), w, h, gate_fnv(0, v, (size_t)w * h * 4), n,
 			       gate_fnv(0, a, (size_t)n * 4), lag);
@@ -311,7 +323,7 @@ static int gate_run(const struct gate_core *c, const struct gate_opts *o)
 			FILE *f = fopen(path, "wb");
 			if (f) { fwrite(c->save_data(i), 1, (size_t)c->save_size(i), f); fclose(f); }
 		}
-	if (o->vidOut)
+	if (o->vidOut && !strstr(o->vidOut, "%ld"))
 	{
 		int w, h;
 		const uint32_t *v = c->video(&w, &h);

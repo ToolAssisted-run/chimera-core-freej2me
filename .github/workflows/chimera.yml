@@ -10,7 +10,9 @@ name: chimera waterbox core
 #     package declares the controls the core has;
 #   - the MIDlet runs: keys, touch, sound, the screen size setting;
 #   - the sandbox runs are the same again, through savestates around every
-#     frame, in a new process and after a rewind;
+#     frame, in a new host, from a state file in another process and after a
+#     rewind;
+#   - the game: tests SKIP here: no commercial game is on a runner;
 #   - the native runner runs the MIDlet (it is not compared with the sandbox:
 #     natively the game's threads run on the host's clock);
 #   - the package plays a project in Chimera's headless runner;
@@ -144,7 +146,7 @@ jobs:
           cat gate.out
           [ "$rc" -eq 0 ]
           for t in source:patched package:fresh package:controls package:key-names j2me:runs j2me:keys j2me:touch \
-                   j2me:sound j2me:effects j2me:screen-size box:again box:rerecord box:session box:rewind \
+                   j2me:sound j2me:effects j2me:screen-size box:again box:rerecord box:session box:resume box:rewind \
                    refused:no-game native:runs engine:boot; do
             grep -q "^$t  *PASS " gate.out || { echo "$t did not pass"; exit 1; }
           done

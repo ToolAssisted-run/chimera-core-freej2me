@@ -14,6 +14,11 @@
  * kept in guest state shows.
  * --state-hash prints, after the run, a digest of the whole saved machine:
  * two runs that end in the same machine print the same line.
+ * --save-at N FILE writes the machine to FILE before frame N, and carries on;
+ * --resume FILE N, in another process, loads it and runs from frame N: the
+ * reports from there must be the straight run's. --dump-baseline FILE writes
+ * every page of the sealed machine (index, then 4096 bytes), for comparing
+ * what two processes sealed.
  * (From chimera-core-tic80.) SPDX-License-Identifier: MIT
  */
 #include "minibox.h"
@@ -84,6 +89,9 @@ static int g_rerecord;
 static int g_session;
 static int g_rewind;
 static int g_stateHash;
+static long g_saveAt = -1;
+static const char *g_saveFile, *g_resumeFile, *g_baselineFile;
+static long g_resumeAt;
 static long g_sessionAt;
 static long g_frameNo;
 static membuf g_state;
@@ -147,6 +155,16 @@ static void core_pre_frame(void)
 {
 	const long frame = g_frameNo++;
 	mb_return r;
+	if (g_saveFile && frame == g_saveAt)
+	{
+		membuf m = { 0 };
+		wbx_save_state(g_host, mem_write, (uintptr_t)&m, &r);
+		if (r.error_message[0]) { fprintf(stderr, "save_state: %s\n", r.error_message); exit(1); }
+		FILE *f = fopen(g_saveFile, "wb");
+		if (!f || fwrite(m.b, 1, m.len, f) != m.len) { perror(g_saveFile); exit(1); }
+		fclose(f);
+		free(m.b);
+	}
 	if (g_session && frame == g_sessionAt)
 	{
 		/* the machine leaves in a state and arrives in a new host */
@@ -286,6 +304,9 @@ int main(int argc, char **argv)
 		if (!strcmp(argv[i], "--session")) g_session = 1;
 		if (!strcmp(argv[i], "--rewind")) g_rewind = 1;
 		if (!strcmp(argv[i], "--state-hash")) { g_stateHash = 1; memmove(argv + i, argv + i + 1, (size_t)(argc - i - 1) * sizeof *argv); argc--; i--; }
+		else if (!strcmp(argv[i], "--save-at") && i + 2 < argc) { g_saveAt = strtol(argv[i + 1], 0, 0); g_saveFile = argv[i + 2]; memmove(argv + i, argv + i + 3, (size_t)(argc - i - 3) * sizeof *argv); argc -= 3; i--; }
+		else if (!strcmp(argv[i], "--resume") && i + 2 < argc) { g_resumeFile = argv[i + 1]; g_resumeAt = strtol(argv[i + 2], 0, 0); memmove(argv + i, argv + i + 3, (size_t)(argc - i - 3) * sizeof *argv); argc -= 3; i--; }
+		else if (!strcmp(argv[i], "--dump-baseline") && i + 1 < argc) { g_baselineFile = argv[i + 1]; memmove(argv + i, argv + i + 2, (size_t)(argc - i - 2) * sizeof *argv); argc -= 2; i--; }
 	}
 	int suggest = argc > 3 && !strcmp(argv[3], "--suggest");
 	if (suggest)
@@ -347,6 +368,40 @@ int main(int argc, char **argv)
 	wbx_seal(g_host, &r);
 	if (r.error_message[0]) { fprintf(stderr, "seal: %s\n", r.error_message); return 1; }
 	wbx_activate_host(g_host, &r);
+
+	if (g_baselineFile)
+	{
+		FILE *df = fopen(g_baselineFile, "wb");
+		mb_return pr;
+		wbx_get_page_len(g_host, &pr);
+		const size_t np = pr.data;
+		for (size_t pg = 0; df && pg < np; pg++)
+		{
+			wbx_get_page_data(g_host, pg, &pr);
+			if (!(pr.data & 1) || (pr.data & 0x40))
+				continue;
+			uint64_t idx = pg;
+			fwrite(&idx, 8, 1, df);
+			fwrite((const void *)(uintptr_t)(0x36f00000000ull + pg * 4096), 1, 4096, df);
+		}
+		if (df) fclose(df);
+	}
+	if (g_resumeFile)
+	{
+		FILE *f = fopen(g_resumeFile, "rb");
+		if (!f) { perror(g_resumeFile); return 1; }
+		membuf m = { 0 };
+		uint8_t chunk[65536];
+		size_t n;
+		while ((n = fread(chunk, 1, sizeof chunk, f)) > 0) mem_write((uintptr_t)&m, chunk, n);
+		fclose(f);
+		wbx_load_state(g_host, mem_read, (uintptr_t)&m, &r);
+		if (r.error_message[0]) { fprintf(stderr, "load_state (resume): %s\n", r.error_message); return 1; }
+		free(m.b);
+		/* the state was taken before frame N: the run goes on from frame N + 1 */
+		g_frameNo = g_resumeAt;
+		o.first = g_resumeAt + 1;
+	}
 
 	c.init = core_init_done;
 	int ret = gate_run(&c, &o);

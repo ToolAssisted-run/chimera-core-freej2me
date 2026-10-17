@@ -77,8 +77,12 @@ if it is new, and run that script.
 a project would mount: the game under its name, `slots`
 (`{"game":["name.jar"]}`) and `settings` (`{}`, or settings by name). The
 options are in `waterbox/gate-harness.h`: `--frames`, `--report`,
-`--press INDEX:FIRST:COUNT`, `--axis`, `--vid-out`, `--aud-out`, and for
-`run-wbx` `--rerecord`, `--session`, `--rewind` and `--state-hash`.
+`--press INDEX:FIRST:COUNT`, `--axis`, `--vid-out` (a name with `%ld` in it
+gets a picture at every report), `--aud-out`, and for `run-wbx`
+`--rerecord`, `--session`, `--rewind`, `--state-hash`, `--save-at N FILE`,
+`--resume FILE N` and `--dump-baseline FILE` (`run-wbx.c` says what each
+does). `run-native` works inside the game's folder: give it absolute paths
+for its output.
 
 ## The tests
 
@@ -86,9 +90,12 @@ options are in `waterbox/gate-harness.h`: `--frames`, `--report`,
 CHIMERA_ROOT=<chimera checkout> bash waterbox/run-gate.sh
 ```
 
-17 tests, about a minute. Without `CHIMERA_ROOT` the two that need Chimera
-are skipped. Chimera's contract tests run on the package too (Chimera's
-`AGENTS.md`).
+23 tests, about two and a half minutes. Without `CHIMERA_ROOT` the two that
+need Chimera are skipped. Five run commercial games, which are never in the
+repository: put the files in `tests/games-local` (ignored by git), or name
+their folder in `GAMES_DIR`; each is named and checked by SHA-1 in the script,
+and the test says SKIP where it is absent. Chimera's contract tests run on
+the package too (Chimera's `AGENTS.md`).
 
 ## Troubleshooting
 

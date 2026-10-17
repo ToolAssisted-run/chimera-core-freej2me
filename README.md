@@ -15,10 +15,16 @@ New, and not published yet.
   screen, text, record store and sound (MIDI music, tones and WAV sound
   effects), the same in every run, through savestates and in a new process,
   and in Chimera's own headless runner.
-- No game has been tried yet.
+- Five games tried, from boot to their menus and further: Angry Birds
+  (to level 1, with its music), Baldur's Gate, Cars 2 (to its name screen,
+  with sound), Doom RPG (a Russian build: through its sound question, menu
+  and loading into the story, with music) and The Game of Life. Doom RPG is
+  the same through savestates around every one of 1800 frames.
+- Windows: the test MIDlet's project gives the same pictures in Chimera's
+  Windows headless runner as on Linux.
 - Not there yet: DoJa (i-appli) games, which need a Japanese font; export
   of a game's saved data; RAM Watch and RAM Search (the core shows no
-  memory yet); Windows has not been tried.
+  memory yet).
 
 ## What you bring
 

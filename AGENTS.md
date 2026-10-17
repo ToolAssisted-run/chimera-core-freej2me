@@ -39,6 +39,9 @@ design log, with what was decided, why, and what was measured.
 - `tests/midlet/` - the test MIDlet; `tests/make-project.py` writes a
   project, `tests/check-key-names.py` checks the default bindings,
   `tests/vid2png.py` turns a runner's picture into a PNG.
+- `tests/games-local/` - commercial games for the `game:` tests, named by
+  SHA-1 in `run-gate.sh`. Ignored by git: never committed, never uploaded
+  to CI or attached to an issue.
 - `build/` - every build output, ignored by git.
 
 ## Build and test
