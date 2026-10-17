@@ -1,0 +1,11 @@
+[submodule "extern/jdk21u"]
+	path = extern/jdk21u
+	url = https://github.com/openjdk/jdk21u.git
+	shallow = true
+[submodule "extern/freej2me-plus"]
+	path = extern/freej2me-plus
+	url = https://github.com/TASEmulators/freej2me-plus.git
+[submodule "extern/libffi"]
+	path = extern/libffi
+	url = https://github.com/libffi/libffi.git
+	shallow = true

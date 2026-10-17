@@ -1,0 +1,47 @@
+{
+  "_comment": [
+    "The arrows are the host's arrow keys and Fire is Enter, the soft keys Q and W, the number keys the keypad's and the number row's, Star E and Pound R, Clear A, as in FreeJ2ME's own window. Touch is the host's left mouse button at the mouse's place."
+  ],
+  "AllTrollers": {
+    "J2ME Controls": {
+      "Up": "Up",
+      "Down": "Down",
+      "Left": "Left",
+      "Right": "Right",
+      "Fire": "Enter",
+      "Left Soft": "Q",
+      "Right Soft": "W",
+      "Num 1": "Keypad1, Number1",
+      "Num 2": "Keypad2, Number2",
+      "Num 3": "Keypad3, Number3",
+      "Num 4": "Keypad4, Number4",
+      "Num 5": "Keypad5, Number5",
+      "Num 6": "Keypad6, Number6",
+      "Num 7": "Keypad7, Number7",
+      "Num 8": "Keypad8, Number8",
+      "Num 9": "Keypad9, Number9",
+      "Star": "E, KeypadMultiply",
+      "Num 0": "Keypad0, Number0",
+      "Pound": "R, KeypadDivide",
+      "Clear": "A",
+      "Touch": "WMouse L"
+    }
+  },
+  "AllTrollersAutoFire": {
+    "J2ME Controls": {}
+  },
+  "AllTrollersAnalog": {
+    "J2ME Controls": {
+      "Touch X": {
+        "Value": "WMouse X",
+        "Mult": 1.0,
+        "Deadzone": 0.0
+      },
+      "Touch Y": {
+        "Value": "WMouse Y",
+        "Mult": 1.0,
+        "Deadzone": 0.0
+      }
+    }
+  }
+}

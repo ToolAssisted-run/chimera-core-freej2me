@@ -1,0 +1,19 @@
+{
+ "_comment": "This file lists the kinds of file a project of this core can hold. Chimera's New Project window is built from it. Each kind is called a slot. A project file records its files under the slot ids used here.",
+ "slots": [
+  {
+   "id": "game",
+   "title": "Game",
+   "min": 1,
+   "max": 4,
+   "formats": [
+    "jar",
+    "jad",
+    "kjx",
+    "jam",
+    "msd"
+   ],
+   "help": "The game: its .jar, and the descriptor that came with it if there is one (.jad, or .jam for DoJa, .msd for SKT games), which FreeJ2ME reads for the game's properties. A KDDI game is one .kjx file. The files are never changed."
+  }
+ ]
+}

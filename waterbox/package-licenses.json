@@ -1,0 +1,190 @@
+{
+ "package": "freej2me",
+ "effectiveTerms": "GPL-3.0-or-later (FreeJ2ME-Plus) running on GPL-2.0-only (OpenJDK's HotSpot), with permissive and LGPL parts",
+ "commercialUse": "allowed",
+ "note": "The core is a Java VM - OpenJDK 21's HotSpot built as Zero, its interpreter-only form, with the class library - running FreeJ2ME-Plus and this repository's front end. HotSpot is under the GNU General Public License version 2 only; the class library adds the Classpath Exception. FreeJ2ME-Plus is under the GNU General Public License version 3 or later and carries ObjectWeb ASM (BSD) and JLayer (LGPL). The C program around the VM is this repository's (MIT) and only calls into Java, as the java launcher does; the front end in java/ is under the GPL version 3 or later, like FreeJ2ME-Plus. The package carries every licence text and is built from public sources only; it contains no game of anyone's.",
+ "components": [
+  {
+   "name": "chimera-core-freej2me (integration)",
+   "license": "MIT, and GPL-3.0-or-later for java/",
+   "url": "https://github.com/ToolAssisted-run/chimera-core-freej2me",
+   "commit": "{selfCommit}",
+   "file": "LICENSE",
+   "sourceUrl": "https://github.com/ToolAssisted-run/chimera-core-freej2me/archive/{commit}.tar.gz"
+  },
+  {
+   "name": "FreeJ2ME-Plus",
+   "license": "GPL-3.0-or-later",
+   "url": "https://github.com/TASEmulators/freej2me-plus",
+   "commit": "{submodule:extern/freej2me-plus}",
+   "file": "extern/freej2me-plus/LICENSE",
+   "sourceUrl": "https://github.com/TASEmulators/freej2me-plus/archive/{commit}.tar.gz"
+  },
+  {
+   "name": "ObjectWeb ASM (in FreeJ2ME-Plus)",
+   "license": "BSD-3-Clause",
+   "url": "https://asm.ow2.io/",
+   "file": "extern/freej2me-plus/LICENSE"
+  },
+  {
+   "name": "JLayer (in FreeJ2ME-Plus)",
+   "license": "LGPL-2.0-or-later",
+   "url": "https://github.com/umjammer/jlayer",
+   "file": "extern/freej2me-plus/src/javazoom/jl/decoder/Bitstream.java"
+  },
+  {
+   "name": "OpenJDK 21 (HotSpot Zero VM and class library)",
+   "license": "GPL-2.0-only, the class library with the Classpath Exception",
+   "url": "https://github.com/openjdk/jdk21u",
+   "commit": "{submodule:extern/jdk21u}",
+   "file": "extern/jdk21u/LICENSE",
+   "sourceUrl": "https://github.com/openjdk/jdk21u/archive/{commit}.tar.gz"
+  },
+  {
+   "name": "OpenJDK: assembly exception",
+   "license": "GPL-2.0-only WITH OpenJDK-assembly-exception-1.0",
+   "url": "https://github.com/openjdk/jdk21u",
+   "file": "extern/jdk21u/ASSEMBLY_EXCEPTION"
+  },
+  {
+   "name": "OpenJDK: additional licence information",
+   "license": "see the file",
+   "url": "https://github.com/openjdk/jdk21u",
+   "file": "extern/jdk21u/ADDITIONAL_LICENSE_INFO"
+  },
+  {
+   "name": "aes (in OpenJDK's java.base)",
+   "license": "see the file",
+   "url": "https://github.com/openjdk/jdk21u",
+   "file": "extern/jdk21u/src/java.base/share/legal/aes.md"
+  },
+  {
+   "name": "asm (in OpenJDK's java.base)",
+   "license": "see the file",
+   "url": "https://github.com/openjdk/jdk21u",
+   "file": "extern/jdk21u/src/java.base/share/legal/asm.md"
+  },
+  {
+   "name": "c-libutl (in OpenJDK's java.base)",
+   "license": "see the file",
+   "url": "https://github.com/openjdk/jdk21u",
+   "file": "extern/jdk21u/src/java.base/share/legal/c-libutl.md"
+  },
+  {
+   "name": "cldr (in OpenJDK's java.base)",
+   "license": "see the file",
+   "url": "https://github.com/openjdk/jdk21u",
+   "file": "extern/jdk21u/src/java.base/share/legal/cldr.md"
+  },
+  {
+   "name": "gcc (in OpenJDK's java.base)",
+   "license": "see the file",
+   "url": "https://github.com/openjdk/jdk21u",
+   "file": "extern/jdk21u/src/java.base/share/legal/gcc.md"
+  },
+  {
+   "name": "icu (in OpenJDK's java.base)",
+   "license": "see the file",
+   "url": "https://github.com/openjdk/jdk21u",
+   "file": "extern/jdk21u/src/java.base/share/legal/icu.md"
+  },
+  {
+   "name": "public_suffix (in OpenJDK's java.base)",
+   "license": "see the file",
+   "url": "https://github.com/openjdk/jdk21u",
+   "file": "extern/jdk21u/src/java.base/share/legal/public_suffix.md"
+  },
+  {
+   "name": "siphash (in OpenJDK's java.base)",
+   "license": "see the file",
+   "url": "https://github.com/openjdk/jdk21u",
+   "file": "extern/jdk21u/src/java.base/share/legal/siphash.md"
+  },
+  {
+   "name": "unicode (in OpenJDK's java.base)",
+   "license": "see the file",
+   "url": "https://github.com/openjdk/jdk21u",
+   "file": "extern/jdk21u/src/java.base/share/legal/unicode.md"
+  },
+  {
+   "name": "zlib (in OpenJDK's java.base)",
+   "license": "see the file",
+   "url": "https://github.com/openjdk/jdk21u",
+   "file": "extern/jdk21u/src/java.base/share/legal/zlib.md"
+  },
+  {
+   "name": "colorimaging (in OpenJDK's java.desktop)",
+   "license": "see the file",
+   "url": "https://github.com/openjdk/jdk21u",
+   "file": "extern/jdk21u/src/java.desktop/share/legal/colorimaging.md"
+  },
+  {
+   "name": "freetype (in OpenJDK's java.desktop)",
+   "license": "see the file",
+   "url": "https://github.com/openjdk/jdk21u",
+   "file": "extern/jdk21u/src/java.desktop/share/legal/freetype.md"
+  },
+  {
+   "name": "giflib (in OpenJDK's java.desktop)",
+   "license": "see the file",
+   "url": "https://github.com/openjdk/jdk21u",
+   "file": "extern/jdk21u/src/java.desktop/share/legal/giflib.md"
+  },
+  {
+   "name": "harfbuzz (in OpenJDK's java.desktop)",
+   "license": "see the file",
+   "url": "https://github.com/openjdk/jdk21u",
+   "file": "extern/jdk21u/src/java.desktop/share/legal/harfbuzz.md"
+  },
+  {
+   "name": "jpeg (in OpenJDK's java.desktop)",
+   "license": "see the file",
+   "url": "https://github.com/openjdk/jdk21u",
+   "file": "extern/jdk21u/src/java.desktop/share/legal/jpeg.md"
+  },
+  {
+   "name": "lcms (in OpenJDK's java.desktop)",
+   "license": "see the file",
+   "url": "https://github.com/openjdk/jdk21u",
+   "file": "extern/jdk21u/src/java.desktop/share/legal/lcms.md"
+  },
+  {
+   "name": "libpng (in OpenJDK's java.desktop)",
+   "license": "see the file",
+   "url": "https://github.com/openjdk/jdk21u",
+   "file": "extern/jdk21u/src/java.desktop/share/legal/libpng.md"
+  },
+  {
+   "name": "mesa3d (in OpenJDK's java.desktop)",
+   "license": "see the file",
+   "url": "https://github.com/openjdk/jdk21u",
+   "file": "extern/jdk21u/src/java.desktop/share/legal/mesa3d.md"
+  },
+  {
+   "name": "pipewire (in OpenJDK's java.desktop)",
+   "license": "see the file",
+   "url": "https://github.com/openjdk/jdk21u",
+   "file": "extern/jdk21u/src/java.desktop/unix/legal/pipewire.md"
+  },
+  {
+   "name": "xwd (in OpenJDK's java.desktop)",
+   "license": "see the file",
+   "url": "https://github.com/openjdk/jdk21u",
+   "file": "extern/jdk21u/src/java.desktop/unix/legal/xwd.md"
+  },
+  {
+   "name": "libffi",
+   "license": "MIT",
+   "url": "https://github.com/libffi/libffi",
+   "commit": "{submodule:extern/libffi}",
+   "file": "extern/libffi/LICENSE",
+   "sourceUrl": "https://github.com/libffi/libffi/archive/{commit}.tar.gz"
+  },
+  {
+   "name": "DejaVu fonts 2.37",
+   "license": "Bitstream-Vera, DejaVu changes public domain",
+   "url": "https://dejavu-fonts.github.io/",
+   "file": "waterbox/fonts-license/DejaVu.txt"
+  }
+ ]
+}

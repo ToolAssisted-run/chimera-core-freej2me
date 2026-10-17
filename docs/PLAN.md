@@ -1,0 +1,171 @@
+# PLAN - the FreeJ2ME-Plus core
+
+The design log: what was decided, why, and what was measured. Newest
+sections last.
+
+## 2026-10-17 - why this core, and what it is
+
+Chimera issue #297 asks for J2ME (and DoJa, i-appli) games.
+[FreeJ2ME-Plus](https://github.com/TASEmulators/freej2me-plus) is the
+emulator the TASVideos community keeps for them; it is written in Java. An
+earlier plan for KEmulator (2026-09-19) concluded that a core could not host
+a Java VM: that was before miniBox's machine spec 3 gave guests timed waits
+on the sandbox's own clock.
+
+A spike (in a scratch folder, 2026-10-17) showed that OpenJDK 21 built as
+Zero - HotSpot with only its interpreter, no compiler and no generated
+machine code - runs in the sandbox, linked statically, and that a Java
+program run there is the same in every run, through savestates and in a new
+process. It found two things in miniBox, one of them a bug:
+
+- **Host values in the vector registers.** miniBox left xmm0-15 as the host
+  had them at every entry into the guest; a guest function that takes
+  variable arguments saves them into its memory, so the states of two
+  processes differed. Fixed in miniBox c0aad51 (and Chimera 1dae12a), with
+  tests seen failing on Linux and Windows without the fix.
+- **The order of threads woken together** is not saved in a state; this was
+  looked at and is not a bug: every waiter due at a moment is woken before
+  any runs, and the next to run is chosen by thread number.
+
+## 2026-10-17 - the licence (user-decided, 2026-10-17)
+
+HotSpot is under the GPL version 2 only, without the Classpath Exception
+(the exception covers the class library). FreeJ2ME-Plus is under the GPL
+version 3 or later. The two licences are not compatible for one program in
+general. The design keeps the boundary the java launcher has: the C program
+starts the VM and calls Java through JNI, and nothing in Java calls back
+into our C (the front end declares no native methods). The owner accepted
+this basis. The repository's own C is MIT; the front end in `java/` is
+GPL-3.0-or-later, as it runs with FreeJ2ME-Plus.
+
+## 2026-10-17 - the repository (user-decided, 2026-10-17)
+
+Created locally as `chimera-core-freej2me`; making it public, and the roster
+row, wait for the owner's word.
+
+## 2026-10-17 - how the core is put together
+
+- **The VM.** OpenJDK jdk21u at tag jdk-21.0.12.1-ga, Zero, with the serial
+  collector and nothing else that is optional (no JIT, no CDS, no JVMTI, no
+  management). `build-jdk.sh` builds it for the host with upstream's own
+  build; `build-guest.py` compiles the same 1076 files again from the build's
+  `compile_commands.json` with the guest's flags: `-DSTATIC_BUILD` (every
+  library linked in), library-based thread-locals (the guest has no
+  `__thread`), musl. HotSpot finds its libraries linked in through
+  `JNI_OnLoad_<name>` (generated for those that have none) and a table of
+  every native function that `dlsym` answers from.
+- **Two patches to OpenJDK** (both inside `#ifdef CHIMERA_CORE`):
+  0001 lets HotSpot take a library as present though no file of it exists;
+  0002 makes Zero pay for the code it runs - every 1000 backward branches or
+  method entries cost 20 microseconds of the machine's clock (a sleep), and a
+  backward branch checks for a safepoint. Without it, a thread spinning on a
+  variable never lets the thread that would set it run, and never lets a
+  timed wait expire: the spike hung on exactly that.
+- **The VM's thread.** `driver.c` creates the VM on a thread of its own (on
+  the first thread HotSpot looks for the process's stack in /proc) and asks
+  it for one thing at a time: start the game, run a frame. The VM thread
+  calls `chimera.Frontend` through JNI.
+- **Files.** The sandbox's file table is outside the guest and not in a
+  state; a VM keeps files open across frames. So every file call is routed
+  (`--wrap`) to `memfs.c`, which serves them from guest memory. The
+  runtime's files (37 files, 66 MB: the class library, fonts, the sound
+  bank, the two jars) are packed and built into the core's image as
+  read-only data: in no savestate, and the class library, which the VM maps
+  whole, is mapped as the pack's own bytes with nothing copied. The game and
+  the settings are copied in by Init. What the game writes (FreeJ2ME's
+  configuration, record stores) lives in guest memory and in the state.
+- **The VM starts in Init**, before the sandbox seals the machine. Its
+  start-up and the game's loading are then part of the sealed image, not of
+  every state. In the spike, which started the VM on the first frame, a
+  state was about 100 MB; here it is 14 MB after 300 frames of the test
+  MIDlet.
+- **The front end** (`java/chimera/Frontend.java`) is modelled on
+  FreeJ2ME-Plus's libretro front end: the same settings set in the same
+  order (load, settings, run), the same key events (a held key repeats once
+  a frame), a frame of 1/60 s of sleep, then the picture copied from
+  FreeJ2ME's screen buffer.
+- **Sound.** The JDK's sound devices are not built (no libjsound); the front
+  end's jar registers a mixer of its own (`chimera.sound`), the only one Java
+  Sound finds. Every line a program opens - Gervill, the JDK's MIDI
+  synthesizer, opens one per synthesizer; FreeJ2ME plays WAV sound as clips -
+  plays into one stereo bus at 44100 Hz, which each frame takes 735 samples
+  of. A line's writer waits while its buffer (at most three frames) is full,
+  so a synthesizer renders exactly as far ahead as that, in every run. Lines
+  of other rates and sizes are converted as they play (linear steps).
+- **The sound bank.** Gervill makes its bank the first time it opens when
+  none is installed - 50 seconds in an interpreter, and the result is
+  written into the user's home folder. The build makes it once, with the
+  built VM, and installs it in the runtime's `lib/audio`, where Gervill looks
+  first. Its maker draws random phases from `Math.random()`, which nothing
+  seeds: two builds made two different banks. `MakeSoundbank.java` seeds
+  that generator first; two builds now make the same bank, byte for byte.
+- **Fonts.** FreeJ2ME draws text with Java's logical fonts. The runtime has
+  the DejaVu fonts and a font table (`-Dsun.awt.fontconfig`, which needs no
+  fontconfig library; paths through `$JRE_LIB_FONTS`). The build checks the
+  fonts against `fonts.sha256`.
+- **Settings** are FreeJ2ME's own: Screen Size, Phone Keys, Frame Limit,
+  Sound, MIDI Synthesizers, and Text Encoding, which is the VM's
+  `file.encoding` (a VM cannot change it once started; FreeJ2ME restarts its
+  process for it, which a core cannot, so a game that asks for another
+  encoding than the one chosen is refused with a message saying which).
+- **Controls**: the phone's 20 keys in FreeJ2ME's numbering, and the touch
+  screen as Touch and Touch X/Y (0 to 65535, a fraction of the picture).
+  `InputWasRead` answers 1 every frame: a J2ME game is told of a key when it
+  changes, so there is no frame that "did not read" its input to report.
+
+## 2026-10-17 - measured
+
+On this machine (WSL2, 20 threads), with the test MIDlet:
+
+- Build from scratch: OpenJDK 4 minutes; the Java half 80 seconds the first
+  time (45 of them the sound bank), 35 after; the guest a few minutes the
+  first time, 40 seconds after.
+- `core.wbx` 103 MB; the package 36.6 MB; packaging is deterministic.
+- Start-up (host, Init, VM, game) 2.0 seconds. A frame 4.6 ms with four MIDI
+  synthesizers, 2.8 ms with one (1200 frames). The host process uses about
+  270 MB.
+- A state after 300 frames: 14 MB.
+- The test script (`run-gate.sh`): 17 passed, 0 failed, 0 skipped, with
+  CHIMERA_ROOT set (`source:patched` needs the first commit to pass).
+- Chimera's contract tests on the package: 20 passed, 0 failed.
+
+The sound was checked by measuring it: the dominant pitch of the test
+MIDlet's tune, a quarter of a second at a time, walks C4 (262 Hz) to C5
+(523 Hz) and back, and the WAV beep shows at the frame it is pressed.
+
+## 2026-10-17 - the tests, and how each was seen to fail
+
+One build broke on purpose: the keys and the touch never reached the
+machine, the sound was never mixed, the Screen Size setting was ignored, a
+value kept in memory that is in no state was drawn into the picture, the
+message for a missing game was changed, and two buttons were swapped in
+`waterbox.config`; a source was touched after the build, and the package
+was left from before the break. The test script then failed `package:fresh`,
+`package:controls`, `j2me:keys`, `j2me:touch`, `j2me:sound`, `j2me:effects`,
+`j2me:screen-size`, `box:session`, `box:rewind`, `refused:no-game`,
+`native:runs` and `engine:boot`; `source:patched` failed as there was no
+commit yet.
+
+Not seen to fail: `box:again` and `box:rerecord`. Nothing in the core alone
+makes two runs differ (the sandbox gives a guest nothing of the host's),
+and a save and a load of the same moment leave everything the same - a
+value in no state survives them too. miniBox's host from before c0aad51,
+which made the spike's runs differ, no longer makes this core's differ
+either: the VM's start-up, where the spike's leaked values landed, is now
+before the seal. Their comparison is the one `box:session` failed with.
+
+## Not done
+
+- **No game has been run.** The owner will provide test games.
+- **DoJa (i-appli)** games need a Japanese font, and Shift_JIS chosen before
+  the VM starts; Text Encoding does the second.
+- **Save data**: FreeJ2ME's record stores are in the machine's memory and in
+  states, but Export Save Data shows nothing yet, and a project cannot start
+  from saved data.
+- **Memory**: no memory domain is shown, so RAM Watch and RAM Search have
+  nothing; the Java heap is the candidate.
+- **Windows** has not been tried, nor CI.
+- At start-up something in the JDK asks for a socket (IPv4, stream), which
+  the sandbox refuses and says so once; not traced yet.
+- FreeJ2ME's rotation and its compatibility and speed settings are not
+  offered yet.

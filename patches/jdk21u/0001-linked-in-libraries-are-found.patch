@@ -1,0 +1,18 @@
+diff --git a/src/hotspot/share/runtime/os.cpp b/src/hotspot/share/runtime/os.cpp
+index 77f6ef463..a111beaf7 100644
+--- a/src/hotspot/share/runtime/os.cpp
++++ b/src/hotspot/share/runtime/os.cpp
+@@ -282,6 +282,13 @@ static bool conc_path_file_and_check(char *buffer, char *printbuffer, size_t pri
+   int ret = jio_snprintf(printbuffer, printbuflen, "%s%s%s", pname, filesep, fname);
+   // Check whether file exists.
+   if (ret != -1) {
++#ifdef CHIMERA_CORE
++    // Every library is linked into the core; none exists as a file.
++    const size_t flen = strlen(fname), slen = strlen(JNI_LIB_SUFFIX);
++    if (flen > slen && strcmp(fname + flen - slen, JNI_LIB_SUFFIX) == 0) {
++      return true;
++    }
++#endif
+     struct stat statbuf;
+     return os::stat(buffer, &statbuf) == 0;
+   }

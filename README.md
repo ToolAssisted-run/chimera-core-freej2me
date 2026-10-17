@@ -1,0 +1,48 @@
+# chimera-core-freej2me
+
+A core for [Chimera](https://github.com/ToolAssisted-run/chimera), the
+frontend for tool-assisted speedruns, for **J2ME games**: the Java games of
+2000s mobile phones. It runs
+[FreeJ2ME-Plus](https://github.com/TASEmulators/freej2me-plus) on a Java VM
+(OpenJDK 21) built into the core, and produces one file,
+`freej2me.chimeraCore`, that goes in Chimera's `Cores` folder.
+
+## Status
+
+New, and not published yet.
+
+- The core's own test MIDlet runs in the sandbox with its keys, touch
+  screen, text, record store and sound (MIDI music, tones and WAV sound
+  effects), the same in every run, through savestates and in a new process,
+  and in Chimera's own headless runner.
+- No game has been tried yet.
+- Not there yet: DoJa (i-appli) games, which need a Japanese font; export
+  of a game's saved data; RAM Watch and RAM Search (the core shows no
+  memory yet); Windows has not been tried.
+
+## What you bring
+
+A game: its `.jar`, with the `.jad` that came with it if there is one. A
+KDDI game is one `.kjx` file. Nothing else is needed: the Java VM, its
+fonts and the MIDI synthesizer's sounds are in the core.
+
+## Buttons and settings
+
+- **Keys**: Up, Down, Left, Right, Fire, Left Soft, Right Soft, Num 0 to Num
+  9, Star, Pound and Clear.
+- **Touch screen**: Touch, held where Touch X and Touch Y say.
+- **Settings**: Screen Size, Phone Keys (which maker's key codes the keys
+  send), Frame Limit, Sound, MIDI Synthesizers and Text Encoding. All of them
+  are part of the machine: a movie needs the same values.
+
+## Building and testing
+
+[docs/BUILDING.md](docs/BUILDING.md) has every step. [docs/PLAN.md](docs/PLAN.md)
+is the design log: what was decided, why, and what was measured.
+
+## Licence
+
+This repository's own code is MIT, except the front end in `java/`, which is
+GPL-3.0-or-later like FreeJ2ME-Plus. FreeJ2ME-Plus is GPL-3.0-or-later;
+OpenJDK's HotSpot is GPL-2.0-only and its class library adds the Classpath
+Exception. The package carries every licence text. See [LICENSE](LICENSE).

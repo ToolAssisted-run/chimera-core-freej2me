@@ -1,0 +1,45 @@
+diff --git a/src/hotspot/share/interpreter/zero/bytecodeInterpreter.cpp b/src/hotspot/share/interpreter/zero/bytecodeInterpreter.cpp
+index 42a8c6cab..93b91d973 100644
+--- a/src/hotspot/share/interpreter/zero/bytecodeInterpreter.cpp
++++ b/src/hotspot/share/interpreter/zero/bytecodeInterpreter.cpp
+@@ -298,7 +298,32 @@ JRT_END
+ 
+ #define METHOD istate->method()
+ #define GET_METHOD_COUNTERS(res)
++#ifdef CHIMERA_CORE
++// Time is bought with executed code. In the sandbox one thread runs at a
++// time and the clock moves only when a thread asks for the time or sleeps,
++// so a loop that does neither would never let another thread run, and never
++// let a timed wait expire. Every CHIMERA_ZERO_BUDGET backward branches and
++// method entries, chimera_zero_budget() charges the machine's clock and gives
++// the other threads a turn. A backward branch is also where a safepoint is
++// honoured: Zero otherwise only checks at returns, and a thread spinning in a
++// loop would hold every other thread at a safepoint.
++#define CHIMERA_ZERO_BUDGET 1000
++extern "C" void chimera_zero_budget();
++static int chimera_zero_events;
++#define CHIMERA_ZERO_CHARGE()                                   \
++    if (++chimera_zero_events >= CHIMERA_ZERO_BUDGET) {         \
++      chimera_zero_events = 0;                                  \
++      chimera_zero_budget();                                    \
++    }
++#define DO_BACKEDGE_CHECKS(skip, branch_pc)                     \
++    if ((skip) <= 0) {                                          \
++      CHIMERA_ZERO_CHARGE();                                    \
++      RETURN_SAFEPOINT;                                         \
++    }
++#else
++#define CHIMERA_ZERO_CHARGE()
+ #define DO_BACKEDGE_CHECKS(skip, branch_pc)
++#endif
+ 
+ /*
+  * For those opcodes that need to have a GC point on a backwards branch
+@@ -604,6 +629,7 @@ void BytecodeInterpreter::run(interpreterState istate) {
+       return;
+     }
+     case method_entry: {
++      CHIMERA_ZERO_CHARGE();
+       THREAD->set_do_not_unlock_if_synchronized(true);
+ 
+       // Lock method if synchronized.
