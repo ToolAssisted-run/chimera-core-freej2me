@@ -37,8 +37,8 @@ jb="$root/build/jdk"
 g="$root/build/guest"
 mkdir -p "$g"
 
-# the kernel's headers (Debian's linux-libc-dev), and X11's and fontconfig's,
-# which OpenJDK's headless AWT includes: the guest's include path is the
+# the kernel's headers (Debian's linux-libc-dev), and X11's, fontconfig's and
+# CUPS's, which OpenJDK's headless AWT includes: the guest's include path is the
 # guest C library's, not the build machine's, so they are copied where it
 # looks last (from the folder build-jdk.sh took them from)
 kin="${KERNEL_INCLUDE:-/usr/include}"
@@ -49,9 +49,9 @@ if [ ! -d "$g/kernel-include/linux" ]; then
 fi
 xin="${JDK_EXTRA_ROOT:+$JDK_EXTRA_ROOT/usr/include}"
 xin="${xin:-/usr/include}"
-if [ ! -d "$g/kernel-include/X11" ]; then
-	cp -R "$xin/X11" "$xin/fontconfig" "$g/kernel-include/"
-fi
+for d in X11 fontconfig cups; do
+	[ -d "$g/kernel-include/$d" ] || cp -R "$xin/$d" "$g/kernel-include/"
+done
 
 # logged <log> <command...>: runs it with its output in the log, and on a
 # failure shows the log's end (a runner keeps nothing else)
