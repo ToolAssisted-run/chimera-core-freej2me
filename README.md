@@ -23,15 +23,21 @@ New, and not published yet.
 - Windows: the test MIDlet's project gives the same pictures in Chimera's
   Windows headless runner as on Linux, and a state saved on either and
   loaded by another run continues the same.
-- Not there yet: DoJa (i-appli) games, which need a Japanese font; export
-  of a game's saved data; RAM Watch and RAM Search (the core shows no
-  memory yet).
+- Japanese text draws with IPAex Gothic, a Japanese font in the core.
+- Export Save Data gives the game's record stores as a zip, and a project
+  can start from one.
+- RAM Watch and RAM Search read the Java heap (64 MB), where the game's
+  objects and its classes' variables are. The collector moves objects now and
+  then, so an address found holds its value until the next collection.
+- Not tried yet: DoJa (i-appli) games, for want of one; Chimera's window
+  (only its headless runner so far).
 
 ## What you bring
 
 A game: its `.jar`, with the `.jad` that came with it if there is one. A
 KDDI game is one `.kjx` file. Nothing else is needed: the Java VM, its
-fonts and the MIDI synthesizer's sounds are in the core.
+fonts and the MIDI synthesizer's sounds are in the core. A project can also
+start from saved data: the zip Export Save Data writes.
 
 ## Buttons and settings
 

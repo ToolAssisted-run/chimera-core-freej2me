@@ -21,6 +21,10 @@ that runs in Chimera on Linux and on Windows.
   fonts-dejavu-extra). `FONT_DIR` names their folder when it is not
   `/usr/share/fonts/truetype/dejavu`. The build checks them against
   `waterbox/fonts.sha256`: the picture depends on them.
+- IPAex Gothic, the Japanese font (Debian's fonts-ipaexfont-gothic,
+  `ipaexg.ttf`). `JP_FONT_DIR` names its folder when it is not
+  `/usr/share/fonts/opentype/ipaexfont-gothic` (the package unpacked with
+  `dpkg-deb -x` will do); checked against `waterbox/fonts-ja.sha256`.
 - The kernel's headers (Debian's linux-libc-dev; `KERNEL_INCLUDE` when they
   are not under `/usr/include`).
 - A checkout of Chimera with miniBox built, with its C++ guest toolchain
@@ -52,13 +56,15 @@ if it is new, and run that script.
    front end compiled with the boot JDK's javac (`--release 8`, as
    FreeJ2ME-Plus is) into `build/java/*.jar`, and the runtime in `build/rt`:
    OpenJDK's modules java.base, java.desktop, java.prefs and jdk.charsets
-   (jlink), the DejaVu fonts and their table (`make-fontconfig.py`), and
+   (jlink), the DejaVu fonts, IPAex Gothic and their table
+   (`make-fontconfig.py`), and
    the MIDI synthesizer's sound bank. The sound bank is made once, by the
    built VM (45 seconds), and kept in `build/soundbank`.
 3. **The guest** (`waterbox/build-guest.sh -m <miniBox>`): libffi from its
    git tree; HotSpot and the JDK's native libraries compiled again from the
    same compile commands with the guest toolchain's flags
-   (`build-guest.py`; 1076 files); the runtime's files packed
+   (`build-guest.py`; 1076 files, and `heap.cpp`, ours, which tells the
+   core where the Java heap is); the runtime's files packed
    (`make-pack.py`) and built into the core (`pack.S`); the link, with
    every file call routed to `memfs.c`; then `run-wbx`, the sandbox runner.
 4. **The native runner** (`waterbox/build-native.sh -m <miniBox>`):
@@ -90,7 +96,7 @@ for its output.
 CHIMERA_ROOT=<chimera checkout> bash waterbox/run-gate.sh
 ```
 
-23 tests, about two and a half minutes. Without `CHIMERA_ROOT` the two that
+30 tests, about three and a half minutes. Without `CHIMERA_ROOT` the two that
 need Chimera are skipped. Five run commercial games, which are never in the
 repository: put the files in `tests/games-local` (ignored by git), or name
 their folder in `GAMES_DIR`; each is named and checked by SHA-1 in the script,

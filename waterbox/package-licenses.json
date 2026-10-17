@@ -185,6 +185,12 @@
    "license": "Bitstream-Vera, DejaVu changes public domain",
    "url": "https://dejavu-fonts.github.io/",
    "file": "waterbox/fonts-license/DejaVu.txt"
+  },
+  {
+   "name": "IPAex Gothic font",
+   "license": "IPA-1.0 (IPA Font License Agreement v1.0)",
+   "url": "https://moji.or.jp/ipafont/",
+   "file": "waterbox/fonts-license/IPAexGothic.txt"
   }
  ]
 }

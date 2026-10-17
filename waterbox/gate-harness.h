@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 struct gate_core
 {
@@ -320,6 +321,13 @@ static int gate_run(const struct gate_core *c, const struct gate_opts *o)
 		{
 			char path[1024];
 			snprintf(path, sizeof path, "%s/%s", o->savedataOut, c->save_name(i));
+			/* a name with folders in it gets them */
+			for (char *slash = strchr(path + strlen(o->savedataOut) + 1, '/'); slash; slash = strchr(slash + 1, '/'))
+			{
+				*slash = '\0';
+				mkdir(path, 0755);
+				*slash = '/';
+			}
 			FILE *f = fopen(path, "wb");
 			if (f) { fwrite(c->save_data(i), 1, (size_t)c->save_size(i), f); fclose(f); }
 		}

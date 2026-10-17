@@ -114,6 +114,11 @@ def main():
             path = os.path.realpath(os.path.join(a.zlib, f))
             e = {"file": path, "command": template["command"].replace(template["file"], path)}
             work.append(guest_command(e, "libzip", os.path.join(a.out, "libzip", "zlib-" + f[:-2] + ".o")))
+    # heap.cpp, ours: compiled the way HotSpot's own files are, into libjvm
+    template = next(e for e in cc if e["file"].endswith("/memory/universe.cpp"))
+    heap = os.path.join(os.path.dirname(os.path.abspath(__file__)), "heap.cpp")
+    e = {"file": heap, "command": template["command"].replace(template["file"], heap)}
+    work.append(guest_command(e, "libjvm", os.path.join(a.out, "libjvm", "chimera_heap.o")))
     for lib in ["libjvm"] + [l for _, l in LIBS]:
         os.makedirs(os.path.join(a.out, lib), exist_ok=True)
     objs = [o for o, _ in work]

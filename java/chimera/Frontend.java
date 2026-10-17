@@ -13,6 +13,12 @@
 package chimera;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import org.recompile.mobile.Mobile;
 import org.recompile.mobile.MobilePlatform;
@@ -39,7 +45,8 @@ public final class Frontend
 
 	/* game: the file to load. settings: FreeJ2ME's own setting names and
 	   values, "name=value", set before the game runs as the libretro front
-	   end sets them; a name starting with "sys." is a system setting. */
+	   end sets them; a name starting with "sys." is a system setting, and
+	   "chimera.savedata=<file>" is the project's save data. */
 	public static boolean start(String game, int w, int h, String[] settings)
 	{
 		// As the libretro front end: an exit request from the game does not
@@ -68,7 +75,11 @@ public final class Frontend
 			final int eq = s.indexOf('=');
 			if (eq <= 0) { continue; }
 			final String name = s.substring(0, eq), value = s.substring(eq + 1);
-			if (name.startsWith("sys.")) { Mobile.config.sysSettings.put(name.substring(4), value); }
+			if (name.equals("chimera.savedata"))
+			{
+				if (!seedSaveData(value)) { return false; }
+			}
+			else if (name.startsWith("sys.")) { Mobile.config.sysSettings.put(name.substring(4), value); }
 			else { Mobile.config.settings.put(name, value); }
 		}
 		Mobile.config.saveConfig();
@@ -119,6 +130,71 @@ public final class Frontend
 			System.arraycopy(front, 0, lcd, 0, Math.min(front.length, lcd.length));
 		}
 		Bus.mix(audio, AUDIO_FRAMES);
+	}
+
+	/* The project's save data, put where FreeJ2ME keeps the game's record
+	   stores (rms/<the game's suite name>/: a store is a description,
+	   <name>.rms, and a file for each record) before the game runs: the .zip
+	   Export Save Data writes. Save data that is not this game's is refused,
+	   not ignored. */
+	private static boolean seedSaveData(String file)
+	{
+		final String suite = Mobile.getPlatform().loader.suitename;
+		final String dir = "rms/" + suite + "/";
+		if (!file.toLowerCase().endsWith(".zip"))
+		{
+			error = "the save data must be the .zip Export Save Data writes, not " + file;
+			return false;
+		}
+		try
+		{
+			int files = 0;
+			ZipInputStream z = new ZipInputStream(new FileInputStream(file));
+			try
+			{
+				for (ZipEntry e; (e = z.getNextEntry()) != null; )
+				{
+					if (e.isDirectory()) { continue; }
+					final String name = e.getName();
+					if (!name.startsWith("rms/") || name.contains("..") || name.contains("\\"))
+					{
+						error = "the save data holds " + name + ", which is not FreeJ2ME's (rms/<game>/...)";
+						return false;
+					}
+					if (!name.startsWith(dir) || name.length() == dir.length() || name.indexOf('/', dir.length()) >= 0)
+					{
+						error = "the save data is another game's: " + name + " (this game's is under " + dir + ")";
+						return false;
+					}
+					copy(z, new File(name));
+					files++;
+				}
+			}
+			finally { z.close(); }
+			if (files == 0)
+			{
+				error = "the save data holds nothing";
+				return false;
+			}
+			return true;
+		}
+		catch (IOException e)
+		{
+			error = "the save data could not be read: " + e;
+			return false;
+		}
+	}
+
+	private static void copy(InputStream in, File to) throws IOException
+	{
+		to.getParentFile().mkdirs();
+		FileOutputStream out = new FileOutputStream(to);
+		try
+		{
+			final byte[] b = new byte[16384];
+			for (int n; (n = in.read(b)) > 0; ) { out.write(b, 0, n); }
+		}
+		finally { out.close(); }
 	}
 
 	private static int pressedKey()

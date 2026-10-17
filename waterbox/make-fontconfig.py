@@ -2,7 +2,9 @@
 """Writes Java's table of logical fonts (fontconfig.properties, read through
 -Dsun.awt.fontconfig, which needs no fontconfig library): Dialog, SansSerif,
 Serif, Monospaced and DialogInput, each in four styles, from the DejaVu
-files in the runtime's lib/fonts ($JRE_LIB_FONTS).
+files in the runtime's lib/fonts ($JRE_LIB_FONTS). A character DejaVu does
+not have - Japanese kana and kanji - is taken from IPAex Gothic (the
+fallback); the measurements of a font stay DejaVu's.
 
   make-fontconfig.py <out>
 SPDX-License-Identifier: MIT"""
@@ -25,7 +27,10 @@ for name, base in logical.items():
     for st, suffix in styles.items():
         s = suffix.replace("Oblique", "Italic") if base == "DejaVu Serif" else suffix
         lines.append("%s.%s.latin-1=%s%s" % (name, st, base, s))
+        lines.append("%s.%s.japanese-x0208=IPAexGothic" % (name, st))
 lines.append("sequence.allfonts=latin-1")
+lines.append("sequence.fallback=japanese-x0208")
+faces["IPAexGothic"] = "ipaexg"
 for face, f in faces.items():
     lines.append("filename.%s=$JRE_LIB_FONTS/%s.ttf" % (face.replace(" ", "_"), f))
 with open(out, "w") as o:

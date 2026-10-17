@@ -669,6 +669,33 @@ int memfs_is_image(const void *addr)
 	return g_image && (const unsigned char *)addr >= g_image && (const unsigned char *)addr < g_image + g_imageSize;
 }
 
+/* The files under a folder that a program wrote (not the pack's), sorted
+ * by path: what Export Save Data lists. Indices stay valid until a file is
+ * made or removed, which only the machine does, while it runs. */
+static int cmp_files(const void *a, const void *b)
+{
+	return strcmp(g_files[*(const int *)a].path, g_files[*(const int *)b].path);
+}
+
+int memfs_list(const char *prefix, int *out, int max)
+{
+	const size_t n = strlen(prefix);
+	int count = 0;
+	for (int i = 0; i < g_nfiles && count < max; i++)
+		if (g_files[i].writable && !g_files[i].is_dir && strncmp(g_files[i].path, prefix, n) == 0)
+			out[count++] = i;
+	qsort(out, (size_t)count, sizeof *out, cmp_files);
+	return count;
+}
+
+const char *memfs_path(int file) { return g_files[file].path; }
+
+const unsigned char *memfs_data(int file, size_t *size)
+{
+	*size = g_files[file].size;
+	return g_files[file].data;
+}
+
 /* ---- names ---- */
 
 int __wrap_mkdir(const char *path, mode_t mode)

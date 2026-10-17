@@ -190,7 +190,8 @@ static void *vm_main(void *arg)
 	JavaVMOption opts[48] = {
 		{ cp, NULL },
 		{ "-XX:+UseSerialGC", NULL },
-		{ "-Xms16m", NULL },
+		/* the whole heap committed from the start: the memory domain shows it */
+		{ "-Xms64m", NULL },
 		{ "-Xmx64m", NULL },
 		{ "-XX:-UsePerfData", NULL },
 		{ "-XX:-UseContainerSupport", NULL },

@@ -109,7 +109,7 @@ check "source:patched" "the three submodules are at their pinned commits, with t
 	sh -c "sh '$here/apply-patches.sh' > '$work/patches.log' 2>&1 && [ $pins = 1 ]"
 
 stale=""
-for src in "$here"/core.c "$here"/driver.c "$here"/driver.h "$here"/guest-shims.c "$here"/memfs.c "$here"/memfs.h "$here"/pack.S \
+for src in "$here"/core.c "$here"/driver.c "$here"/driver.h "$here"/guest-shims.c "$here"/memfs.c "$here"/memfs.h "$here"/heap.cpp "$here"/pack.S \
 	"$root"/patches/*/*.patch $(find "$root/java" -name '*.java'); do
 	[ -e "$src" ] || continue
 	[ "$core" -nt "$src" ] || stale="$stale $(basename "$src")"
@@ -163,6 +163,74 @@ folder small '{"screenSize":"176x220"}' "$midlet"
 box small small --frames 60 --report 30
 check "j2me:screen-size" "Screen Size 176x220 gives a 176x220 picture: $(stream "$work/small.out" | awk '{print $6}' | sort -u | tr '\n' ' ')" \
 	[ "$(stream "$work/small.out" | awk '{print $6}' | sort -u)" = 176x220 ]
+
+# the MIDlet's Japanese line, at frame 90: the pixels IPAex Gothic draws
+# (the font is checked by SHA-256 at build time, so these do not move)
+box jp t --frames 90 --report 90 --vid-out "$work/jp90.raw"
+jp="$(python3 - "$work/jp90.raw" <<'PY' 2>/dev/null
+import sys, hashlib
+d = open(sys.argv[1], "rb").read(); nl = d.index(b"\n"); w = int(d[:nl].split()[0]); px = d[nl + 1:]
+print(hashlib.sha1(b"".join(px[(y * w) * 4:(y * w + 110) * 4] for y in range(56, 76))).hexdigest())
+PY
+)"
+check "j2me:japanese" "the MIDlet's Japanese line is drawn with the Japanese font: its pixels are the ones IPAex Gothic draws ($jp)" \
+	[ "$jp" = 45e873e52c9738ffd85979366fa28a30ef088ea0 ]
+
+# ------------------------------------------------- save data and memory
+# the MIDlet saves its score in a record store every 30 of its frames, and
+# shows at start the score a saved game left
+mkdir -p "$work/saved" "$work/again"
+box sd t --frames 120 --report 120 --savedata-out "$work/saved"
+check "save:export" "Export Save Data gives the MIDlet's record store: $(cd "$work/saved" && find . -type f | sort | tr '\n' ' ')" \
+	cond '[ "$(cd "$work/saved" && find rms/Test -name "*.rms" | wc -l)" = 1 ] && [ "$(cd "$work/saved" && find rms/Test -type f | wc -l)" -ge 2 ]'
+zipup() { python3 - "$1" "$2" <<'PY'
+import os, sys, zipfile
+out, root = sys.argv[1], sys.argv[2]
+with zipfile.ZipFile(out, "w") as z:
+    for d, _, fs in sorted(os.walk(root)):
+        for f in sorted(fs):
+            p = os.path.join(d, f)
+            z.write(p, os.path.relpath(p, root).replace(os.sep, "/"))
+PY
+}
+zipup "$work/save.zip" "$work/saved"
+folder ld '{}' "$midlet"
+cp "$work/save.zip" "$work/ld/"
+printf '{"game":["%s"],"savedata":["save.zip"]}' "$(basename "$midlet")" > "$work/ld/slots"
+box ld ld --frames 20 --report 20 --savedata-out "$work/again"
+box nold t --frames 20 --report 20
+# 20 frames is before the MIDlet's first save: the store it exports then can
+# only be the one the project brought
+check "save:import" "a project started from that save data has the record store from frame 1 ($(cd "$work/again" && find . -type f | wc -l) files, the same as exported) and shows the score it saved (the picture differs from a start with none)" \
+	cond '! same "$work/ld.out" "$work/nold.out" && [ "$(lines "$work/ld.out")" = 1 ] && [ "$(cd "$work/again" && find rms/Test -type f 2>/dev/null | wc -l)" -ge 2 ] && diff -r "$work/saved" "$work/again" > /dev/null'
+mkdir -p "$work/other/rms/Another Game"
+cp "$work/saved/rms/Test/"* "$work/other/rms/Another Game/"
+zipup "$work/other.zip" "$work/other"
+folder og '{}' "$midlet"
+cp "$work/other.zip" "$work/og/"
+printf '{"game":["%s"],"savedata":["other.zip"]}' "$(basename "$midlet")" > "$work/og/slots"
+box og og --frames 1
+check "save:refused" "save data of another game is refused, and says so" grep -q "Init failed.*another game" "$work/og.out" "$work/og.err"
+
+# RAM Search's way: the square's x is 100 before Right is held and the same
+# number after it is let go; exactly one place in the heap is
+for n in 50 95 120; do
+	box heap$n t --frames $n --report $n --press "$right":60:30 --dump-domain "Java Heap" "$work/heap$n.bin"
+done
+found="$(python3 - "$work/heap50.bin" "$work/heap95.bin" "$work/heap120.bin" <<'PY' 2>/dev/null
+import struct, sys
+a, b, c = (open(p, "rb").read() for p in sys.argv[1:4])
+n = len(a) // 4
+A, B, C = (struct.unpack("<%di" % n, x) for x in (a, b, c))
+hits = [i for i in range(n) if A[i] == 100 and B[i] == C[i] and 100 < B[i] < 240 and (B[i] - 100) % 3 == 0]
+print("%d %d %s" % (len(a), len(hits), B[hits[0]] if len(hits) == 1 else "-"))
+PY
+)"
+check "memory:heap" "the Java Heap memory domain ($(echo "$found" | awk '{print $1}') bytes) holds the square's x: $(echo "$found" | awk '{print $2}') place(s) went from 100 to $(echo "$found" | awk '{print $3}') and stayed" \
+	cond '[ "$(echo "$found" | awk "{print \$1}")" = 67108864 ] && [ "$(echo "$found" | awk "{print \$2}")" = 1 ]'
+box look10 t --frames 300 --report 10
+check "memory:looking" "reading the memory three times as often (every 10 frames, not 30) leaves the machine as it was: the reports at frames 30, 60 ... are the same" \
+	cond '[ "$(stream "$work/look10.out" | awk "\$2 % 30 == 0")" = "$(stream "$work/idle.out")" ]'
 
 # ------------------------------------------------- the same machine every time
 play="--frames 300 --report 10 --press $right:60:30 --press $fire:70:1 --press $num5:100:1 --press $touch:120:5 --axis 0:16384:120:5 --axis 1:16384:120:5"

@@ -8,7 +8,9 @@ name: chimera waterbox core
 # before a push:
 #   - the submodules are the pinned commits with the patches applied, and the
 #     package declares the controls the core has;
-#   - the MIDlet runs: keys, touch, sound, the screen size setting;
+#   - the MIDlet runs: keys, touch, sound, the screen size setting, Japanese
+#     text; its record store is exported and a project starts from it; the
+#     Java heap is the memory RAM Search reads, and reading it changes nothing;
 #   - the sandbox runs are the same again, through savestates around every
 #     frame, in a new host, from a state file in another process and after a
 #     rewind;
@@ -74,7 +76,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends meson ninja-build build-essential cmake pkg-config python3 curl xz-utils patch mono-complete xvfb libgl1-mesa-dev libegl-dev \
             libx11-dev libxext-dev libxrender-dev libxrandr-dev libxtst-dev libxt-dev libasound2-dev libcups2-dev libfontconfig-dev \
-            zip unzip autoconf automake libtool openjdk-21-jdk-headless fonts-dejavu-core fonts-dejavu-extra linux-libc-dev
+            zip unzip autoconf automake libtool openjdk-21-jdk-headless fonts-dejavu-core fonts-dejavu-extra fonts-ipaexfont-gothic linux-libc-dev
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
@@ -146,7 +148,7 @@ jobs:
           cat gate.out
           [ "$rc" -eq 0 ]
           for t in source:patched package:fresh package:controls package:key-names j2me:runs j2me:keys j2me:touch \
-                   j2me:sound j2me:effects j2me:screen-size box:again box:rerecord box:session box:resume box:rewind \
+                   j2me:sound j2me:effects j2me:screen-size j2me:japanese save:export save:import save:refused memory:heap memory:looking box:again box:rerecord box:session box:resume box:rewind \
                    refused:no-game native:runs engine:boot engine:resume; do
             grep -q "^$t  *PASS " gate.out || { echo "$t did not pass"; exit 1; }
           done

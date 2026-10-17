@@ -207,17 +207,50 @@ The game: tests were seen to fail with a core whose picture never changed
 after the first frame; `box:resume` with a value kept in no state drawn
 into the picture.
 
+## 2026-10-17 - Japanese text, save data, memory (owner: "do the rest")
+
+- **Japanese text.** FreeJ2ME draws with Java's logical fonts. The font
+  table now has IPAex Gothic (Debian's fonts-ipaexfont-gothic, the IPA Font
+  License, carried unmodified, checked by SHA-256) as the fallback for
+  characters DejaVu lacks; DejaVu stays first, so Latin text keeps its look
+  and its measurements. Measured on the five games: four give the same
+  pictures and sound in every report as before; Angry Birds took one press
+  a report earlier (a timing shift: the machine changed) and is the same
+  again from frame 750. No file was needed from the owner. The test
+  `j2me:japanese` checks the MIDlet's Japanese line against the pixels IPAex
+  Gothic draws; built without the fallback, it fails.
+- **Save data.** FreeJ2ME keeps a record store as a description,
+  `rms/<suite>/<name>.rms`, and a file for each record. Export Save Data
+  lists every file under `rms/` that the game wrote (from memfs), so
+  several files make a zip; the "Save data" slot takes that zip back, and
+  the front end unpacks it into `rms/<suite>/` after the game is loaded and
+  before it runs (in Init, so in the sealed image). A zip with files of
+  another game, or files that are not FreeJ2ME's, is refused with a message.
+  One `.rms` file alone is not accepted: it is a store without its records.
+- **Memory.** One domain, "Java Heap": the serial collector's reserved range,
+  64 MB, which `heap.cpp` (compiled with HotSpot's own flags) reads from the
+  VM. The VM now commits its whole heap from the start (`-Xms64m`, was 16),
+  so every byte of it is memory the machine has. RAM Search finds the test
+  MIDlet's square: exactly one place goes from 100 to 151 when Right is
+  held. The collector moves objects, so an address holds its value until
+  the next collection moves the object; static fields live in the heap
+  too. Reading the memory leaves the machine as it was (`memory:looking`).
+
+Seen to fail, each once: `save:export` with an export that listed nothing,
+`save:import` with the slot's zip ignored (it passed on the first try with
+both broken at once, as two empty folders match; it now also asks for the
+store at frame 20, before the MIDlet's own first save), `save:refused` with
+the zip ignored, `memory:heap` with the domain half its size,
+`memory:looking` with a read that changed the picture.
+
+The test script: 30 passed, 0 failed, 0 skipped (games and CHIMERA_ROOT).
+
 ## Not done
 
 - **Games** were run to their menus and a little further (above); none
   was played through.
-- **DoJa (i-appli)** games need a Japanese font, and Shift_JIS chosen before
-  the VM starts; Text Encoding does the second.
-- **Save data**: FreeJ2ME's record stores are in the machine's memory and in
-  states, but Export Save Data shows nothing yet, and a project cannot start
-  from saved data.
-- **Memory**: no memory domain is shown, so RAM Watch and RAM Search have
-  nothing; the Java heap is the candidate.
+- **DoJa (i-appli)** games: not tried, for want of one. Their scratchpad
+  (DoJa's save data) is not in the export yet.
 - **Windows** was tried in Chimera's headless runner only, not in its
   window; CI has not run.
 - At start-up something in the JDK asks for a socket (IPv4, stream), which

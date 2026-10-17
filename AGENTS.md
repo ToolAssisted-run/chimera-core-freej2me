@@ -29,7 +29,8 @@ design log, with what was decided, why, and what was measured.
   frame at a time, through JNI. The same two files make the native runner.
 - `waterbox/memfs.c` - the machine's files, served from guest memory;
   `guest-shims.c` - what HotSpot asks of the system that the sandbox does not
-  answer; `pack.S` - the runtime's files built into the core.
+  answer; `pack.S` - the runtime's files built into the core; `heap.cpp` -
+  where the Java heap is (the memory domain), compiled with HotSpot's flags.
 - `waterbox/build-jdk.sh`, `build-java.sh`, `build-guest.sh` (with
   `build-guest.py`), `build-native.sh`, `build-package.sh` - the build, in
   that order. `run-gate.sh` - the test script.

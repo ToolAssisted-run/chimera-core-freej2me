@@ -45,6 +45,9 @@ The core this repository builds is made of other people's work:
 - libffi (extern/libffi, a submodule), under the MIT licence.
 - The DejaVu fonts, under the Bitstream Vera licence with DejaVu's changes
   in the public domain (waterbox/fonts-license/DejaVu.txt).
+- IPAex Gothic, the Japanese font, by the Information-technology Promotion
+  Agency, Japan, under the IPA Font License Agreement v1.0
+  (waterbox/fonts-license/IPAexGothic.txt); carried unmodified.
 
 The program around the VM only calls into Java, as the java launcher does;
 nothing in Java calls back into it.

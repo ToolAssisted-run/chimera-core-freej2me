@@ -10,7 +10,8 @@ import javax.microedition.rms.RecordStore;
 
 /* The test MIDlet of the FreeJ2ME core: a square moved by the keys, a timer
  * ticking every 50 ms, text, a score saved to a record store every 30
- * frames, a touch that leaves a mark, and sound - a MIDI tune that loops,
+ * frames, a touch that leaves a mark, Japanese text (the core's fallback
+ * font), and sound - a MIDI tune that loops,
  * a tone on Fire and a beep (a WAV made here) on 5. Everything it draws and
  * plays depends on the keys and the machine's clock, nothing on the host.
  * SPDX-License-Identifier: MIT */
@@ -65,13 +66,21 @@ public class TestMIDlet extends MIDlet {
     }
 
     static class Game extends GameCanvas implements Runnable {
-        int x = 100, y = 100, frames, ticks, saved, tx = -1, ty = -1;
+        int x = 100, y = 100, frames, ticks, saved, loaded = -1, tx = -1, ty = -1;
         int[] trail = new int[64];
         Player music, sound;
         String audio = "";
 
         Game() {
             super(false);
+            // the score a saved game left (the core's save data slot)
+            try {
+                RecordStore rs = RecordStore.openRecordStore("score", false);
+                loaded = Integer.parseInt(new String(rs.getRecord(1)));
+                rs.closeRecordStore();
+            } catch (Exception e) {
+                loaded = -1;
+            }
             new Timer().schedule(new TimerTask() {
                 public void run() { ticks++; }
             }, 0, 50);
@@ -117,6 +126,8 @@ public class TestMIDlet extends MIDlet {
                 g.drawString("frame " + frames + " tick " + ticks, 2, 2, Graphics.TOP | Graphics.LEFT);
                 g.drawString("saved " + saved, 2, 20, Graphics.TOP | Graphics.LEFT);
                 g.drawString(audio, 2, 38, Graphics.TOP | Graphics.LEFT);
+                g.drawString("\u65e5\u672c\u8a9e \u30c6\u30b9\u30c8", 2, 56, Graphics.TOP | Graphics.LEFT);
+                g.drawString(loaded < 0 ? "nothing loaded" : "loaded " + loaded, 2, 74, Graphics.TOP | Graphics.LEFT);
                 for (int i = 0; i < 64; i++)
                     if (trail[i] != 0) g.drawRect(trail[i] / 1000, trail[i] % 1000, 3, 3);
                 if (tx >= 0) { g.setColor(0x40ff40); g.fillArc(tx - 5, ty - 5, 10, 10, 0, 360); }

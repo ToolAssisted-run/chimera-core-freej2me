@@ -13,5 +13,10 @@ int memfs_import(const char *host_name, const char *guest_path);
 /* see memfs.c */
 const void *memfs_map(int fd, size_t len, off_t off, int writable);
 int memfs_is_image(const void *addr);
+/* the written files under prefix, sorted by path, as indices; and each one's
+ * path (absolute) and bytes */
+int memfs_list(const char *prefix, int *out, int max);
+const char *memfs_path(int file);
+const unsigned char *memfs_data(int file, size_t *size);
 
 #endif

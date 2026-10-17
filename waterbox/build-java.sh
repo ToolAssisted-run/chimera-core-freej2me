@@ -14,7 +14,10 @@
 # boot JDK: BOOT_JDK, else javac on the PATH). FONT_DIR is where the DejaVu
 # fonts are (default /usr/share/fonts/truetype/dejavu, Debian's
 # fonts-dejavu-core and fonts-dejavu-extra); they must be the files
-# fonts.sha256 names, as the picture depends on them.
+# fonts.sha256 names, as the picture depends on them. JP_FONT_DIR is where
+# IPAex Gothic is, the Japanese font (default
+# /usr/share/fonts/opentype/ipaexfont-gothic, Debian's
+# fonts-ipaexfont-gothic), checked against fonts-ja.sha256.
 set -eu
 here="$(cd "$(dirname "$0")" && pwd)"
 root="$(cd "$here/.." && pwd)"
@@ -22,6 +25,7 @@ jdk="$root/build/jdk/images/jdk"
 out="$root/build/java"
 rt="$root/build/rt"
 fonts="${FONT_DIR:-/usr/share/fonts/truetype/dejavu}"
+jpfonts="${JP_FONT_DIR:-/usr/share/fonts/opentype/ipaexfont-gothic}"
 javac="${BOOT_JDK:+$BOOT_JDK/bin/}javac"
 [ -x "$jdk/bin/jlink" ] || { echo "build/jdk is not built: run waterbox/build-jdk.sh" >&2; exit 1; }
 # every jar the same from the same sources
@@ -64,6 +68,11 @@ mkdir -p "$rt/lib/fonts"
 	exit 1
 }
 awk '{print $2}' "$here/fonts.sha256" | while read -r f; do cp "$fonts/$f" "$rt/lib/fonts/$f"; done
+(cd "$jpfonts" && sha256sum -c --quiet "$here/fonts-ja.sha256") || {
+	echo "IPAex Gothic in $jpfonts is not the file fonts-ja.sha256 names (set JP_FONT_DIR)" >&2
+	exit 1
+}
+cp "$jpfonts/ipaexg.ttf" "$rt/lib/fonts/ipaexg.ttf"
 python3 "$here/make-fontconfig.py" "$rt/lib/fontconfig.properties"
 
 # Gervill, the JDK's synthesizer, makes a sound bank the first time it is

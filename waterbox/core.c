@@ -70,6 +70,9 @@ static int g_render = 1;
 static int g_running;
 static int16_t g_silence[DRIVER_AUDIO_FRAMES * 2];
 
+/* the memory domain (below) */
+static void find_heap(void);
+
 /* ---- the settings ------------------------------------------------------- */
 static void setting(const char *name, const char *otherwise, char *out, int size)
 {
@@ -144,6 +147,22 @@ ECL_EXPORT int Init(void)
 	}
 #endif
 
+	/* the project's save data: FreeJ2ME's record stores, the .zip Export
+	 * Save Data writes; the front end puts it in place */
+	static char savedata[256];
+	savedata[0] = '\0';
+	if (wbx_slot_count("savedata") > 0) {
+		wbx_slot_name("savedata", 0, savedata, sizeof savedata);
+#ifdef CHIMERA_GUEST
+		char at[300];
+		snprintf(at, sizeof at, "/%.256s", savedata);
+		if (!memfs_import(savedata, at)) {
+			snprintf(g_loadError, sizeof g_loadError, "the save data %.256s could not be read", savedata);
+			return 0;
+		}
+#endif
+	}
+
 	/* the settings, as FreeJ2ME's own */
 	char size[32], phone[32], fps[16], sound[8], synths[8], encoding[16];
 	setting("screenSize", "240x320", size, sizeof size);
@@ -181,22 +200,24 @@ ECL_EXPORT int Init(void)
 	mkdir("home", 0755);
 	mkdir("tmp", 0755);
 
-	static char fj[8][64];
+	static char fj[8][300];
 	snprintf(fj[0], sizeof fj[0], "scrwidth=%d", width);
 	snprintf(fj[1], sizeof fj[1], "scrheight=%d", height);
 	snprintf(fj[2], sizeof fj[2], "phone=%s", phone);
 	snprintf(fj[3], sizeof fj[3], "fps=%s", strcmp(fps, "off") ? fps : "0");
 	snprintf(fj[4], sizeof fj[4], "sys.sound=%s", sound);
 	snprintf(fj[5], sizeof fj[5], "sys.numsynths=%s", synths);
-	const char *fjs[6] = { fj[0], fj[1], fj[2], fj[3], fj[4], fj[5] };
+	snprintf(fj[6], sizeof fj[6], "chimera.savedata=%.256s", savedata);
+	const char *fjs[7] = { fj[0], fj[1], fj[2], fj[3], fj[4], fj[5], fj[6] };
 
 	g_picture = alloc_invisible(MAX_PIXELS * sizeof(uint32_t));
 	driver_set_video_buffer(g_picture, MAX_PIXELS);
-	if (!driver_start(CORE_CLASSPATH, game, width, height, fjs, 6)) {
+	if (!driver_start(CORE_CLASSPATH, game, width, height, fjs, savedata[0] ? 7 : 6)) {
 		snprintf(g_loadError, sizeof g_loadError, "%s", driver_error());
 		return 0;
 	}
 	g_running = 1;
+	find_heap();
 	return 1;
 }
 
@@ -267,17 +288,64 @@ ECL_EXPORT int GetVsyncDenominator(void) { return 1; }
 ECL_EXPORT int16_t *GetAudio(void) { return g_running ? (int16_t *)driver_audio() : g_silence; }
 ECL_EXPORT int GetAudioSampleCount(void) { return DRIVER_AUDIO_FRAMES; }
 
-ECL_EXPORT int GetMemoryDomainCount(void) { return 0; }
-ECL_EXPORT const char *GetMemoryDomainName(int i) { (void)i; return ""; }
-ECL_EXPORT uint8_t *GetMemoryDomainPtr(int i) { (void)i; return NULL; }
-ECL_EXPORT int64_t GetMemoryDomainSize(int i) { (void)i; return 0; }
-ECL_EXPORT int GetMemoryDomainWritable(int i) { (void)i; return 0; }
+/* RAM Watch and RAM Search: the Java heap, where the game's objects and its
+ * classes' static fields live (heap.cpp finds it). The collector moves
+ * objects, so a value found at an address stays there only until the next
+ * collection moves it. Guest only: the native runner's heap is the host's. */
+static uint8_t *g_heap;
+static int64_t g_heapSize;
+#ifdef CHIMERA_GUEST
+extern int chimera_java_heap(void **base, size_t *bytes);
+static void find_heap(void)
+{
+	void *base;
+	size_t bytes;
+	if (chimera_java_heap(&base, &bytes)) {
+		g_heap = base;
+		g_heapSize = (int64_t)bytes;
+	}
+}
+#else
+static void find_heap(void) { }
+#endif
+ECL_EXPORT int GetMemoryDomainCount(void) { return g_heap ? 1 : 0; }
+ECL_EXPORT const char *GetMemoryDomainName(int i) { return i == 0 && g_heap ? "Java Heap" : ""; }
+ECL_EXPORT uint8_t *GetMemoryDomainPtr(int i) { return i == 0 ? g_heap : NULL; }
+ECL_EXPORT int64_t GetMemoryDomainSize(int i) { return i == 0 && g_heap ? g_heapSize : 0; }
+ECL_EXPORT int GetMemoryDomainWritable(int i) { return i == 0 && g_heap; }
 
 ECL_EXPORT const int64_t *GetBusRanges(int32_t bus) { (void)bus; return NULL; }
 ECL_EXPORT const uint8_t *ReadBus(int32_t bus, int64_t addr, int32_t len) { (void)bus; (void)addr; (void)len; return NULL; }
 ECL_EXPORT void PokeBus(int32_t bus, int32_t addr, int32_t value) { (void)bus; (void)addr; (void)value; }
 
+/* Export Save Data: the record stores the game wrote - rms/<suite>/, a
+ * description (.rms) and a file for each record - the names the save data
+ * slot takes back */
+#ifdef CHIMERA_GUEST
+static int g_saves[256], g_saveCount;
+ECL_EXPORT int32_t GetSaveDataFileCount(void)
+{
+	g_saveCount = memfs_list("/rms/", g_saves, 256);
+	return g_saveCount;
+}
+static int save_ok(int32_t i) { return i >= 0 && i < g_saveCount; }
+ECL_EXPORT const char *GetSaveDataFileName(int32_t i) { return save_ok(i) ? memfs_path(g_saves[i]) + 1 : ""; }
+ECL_EXPORT int64_t GetSaveDataFileSize(int32_t i)
+{
+	size_t n = 0;
+	if (save_ok(i))
+		memfs_data(g_saves[i], &n);
+	return (int64_t)n;
+}
+ECL_EXPORT const uint8_t *GetSaveDataFileBuffer(int32_t i)
+{
+	size_t n;
+	return save_ok(i) ? memfs_data(g_saves[i], &n) : NULL;
+}
+#else
+/* the native runner's files are the host's: it exports nothing */
 ECL_EXPORT int32_t GetSaveDataFileCount(void) { return 0; }
 ECL_EXPORT const char *GetSaveDataFileName(int32_t i) { (void)i; return ""; }
 ECL_EXPORT int64_t GetSaveDataFileSize(int32_t i) { (void)i; return 0; }
 ECL_EXPORT const uint8_t *GetSaveDataFileBuffer(int32_t i) { (void)i; return NULL; }
+#endif
