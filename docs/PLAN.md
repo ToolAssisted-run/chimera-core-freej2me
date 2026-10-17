@@ -272,7 +272,9 @@ nightly/dev releases". The repository is public at
 ToolAssisted-run/chimera-core-freej2me; CI builds it from a fresh clone
 (OpenJDK included) and publishes through Chimera's publish-core workflow.
 Chimera issue #297 asked for two cores, openDoJa and FreeJ2ME-Plus; this
-is the second, and no DoJa game has been tried, so the issue stays open.
+is the second. The owner closed the issue without openDoJa (2026-10-17): an
+openDoJa core is a new issue if it is still wanted. No DoJa game has been
+tried yet.
 
 ## Not done
 
