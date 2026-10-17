@@ -352,9 +352,33 @@ PY
 		--screenshot 140="$work/resumed140.tga" --screenshot 148="$work/resumed148.tga" > "$work/engine3.log" 2>&1
 	check "engine:resume" "a state Chimera's headless runner saved at frame 150, loaded by another run of it: frames 140 and 148 after the load are the straight run's frames 291 and 299" \
 		cond 'cmp -s "$work/resumed140.tga" "$work/straight291.tga" && cmp -s "$work/resumed148.tga" "$work/straight299.tga" && ! cmp -s "$work/straight291.tga" "$work/straight299.tga"'
+	# A screen bigger than the 240x320 the package once declared was cut to
+	# its top-left 240x320 in Chimera (chimera#303: EDGE EX at 360x640 showed
+	# a quarter of itself). The picture must be the phone's whole screen, the
+	# sandbox runner's own at frame 121.
+	folder big '{"screenSize":"360x640"}' "$midlet"
+	python3 "$root/tests/make-project.py" "$package" "$work/proj/big.chimeraProject" 130 screenSize=360x640 \
+		"press=Right:59:30" panel="$work/panel.out" -- game="$work/proj/$(basename "$midlet")" > /dev/null
+	"$runner" --project "$work/proj/big.chimeraProject" "$package" --files "$work/proj" --frames 130 \
+		--screenshot 120="$work/big.tga" > "$work/big-engine.log" 2>&1
+	box bigb big --frames 121 --report 121 --press "$right":60:30 --vid-out "$work/big.raw"
+	check "engine:screen-size" "at Screen Size 360x640 Chimera's picture is the whole 360x640 screen, the sandbox runner's own at frame 121" \
+		python3 - "$work/big.tga" "$work/big.raw" <<'PY'
+import struct, sys
+d = open(sys.argv[1], "rb").read()
+w, h = struct.unpack("<HH", d[12:16])
+px = d[18 + d[0]:]
+rows = [px[y * w * 4:(y + 1) * w * 4] for y in range(h)]
+if not d[17] & 0x20:
+    rows = rows[::-1]
+r = open(sys.argv[2], "rb").read()
+nl = r.index(b"\n")
+sys.exit(0 if (w, h) == (360, 640) and r[:nl].split() == [b"360", b"640"] and b"".join(rows) == r[nl + 1:] else 1)
+PY
 else
 	report "engine:boot" SKIP "needs CHIMERA_ROOT with build/dll/chimera-run and build/Cores/freej2me.chimeraCore"
 	report "engine:resume" SKIP "needs CHIMERA_ROOT with build/dll/chimera-run and build/Cores/freej2me.chimeraCore"
+	report "engine:screen-size" SKIP "needs CHIMERA_ROOT with build/dll/chimera-run and build/Cores/freej2me.chimeraCore"
 fi
 
 echo

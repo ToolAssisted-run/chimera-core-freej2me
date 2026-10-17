@@ -297,7 +297,22 @@ two core files are of different sizes, so memory is placed differently; the
 six are not traced. Each package is the same machine run to run (CI ran
 the determinism tests on its own build).
 
-## Not done
+## 2026-10-17 - a screen bigger than 240x320 (chimera#303)
+
+EDGE EX's Nokia 5800 version at Screen Size 360x640 showed about a quarter
+of itself in Chimera. The package declared a 240x320 picture: that is the
+room the frontend keeps for the picture, and Chimera cuts a bigger one to
+it, row by row (the engine does since chimera#270), so 360x640 came out as
+its top-left 240x320. The core always drew the whole screen; the sandbox
+runner's pictures were right.
+
+The package now declares 800x800, room for the largest sizes (480x800 and
+800x480), and no virtual size: the pixels are square, so Chimera shows the
+picture in its own shape, upright or on its side. New test
+`engine:screen-size`: a project at 360x640 through chimera-run is the whole
+360x640 screen, the sandbox runner's own at frame 121. It failed with the
+old package (30 passed, 1 failed) and passes with the new one (31 passed).
+
 
 - **Games** were run to their menus and a little further (above); none
   was played through.
