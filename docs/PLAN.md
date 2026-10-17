@@ -276,6 +276,27 @@ is the second. The owner closed the issue without openDoJa (2026-10-17): an
 openDoJa core is a new issue if it is still wanted. No DoJa game has been
 tried yet.
 
+## 2026-10-17 - the first CI runs, and what was published
+
+Five runs failed before the sixth passed, each on something this machine
+had and a runner did not: libltdl-dev (a macro libffi's autogen.sh uses);
+the X11, fontconfig and CUPS headers, which a guest compile does not find in
+/usr/include (this machine passed them in an explicit path; all 1077 files
+were then compiled here as on a runner, without it, to find the whole set);
+and the native runner's sound test, which asked for more on a slow machine
+than a host-clock synthesizer gives. The sixth: the test script 25 passed,
+0 failed, 5 skipped (the games), the window test 2 passed, 1 skipped,
+Chimera's package checks 20 passed; published as "Development build
+8fbf7c48".
+
+The published package (GCC 13 on the runner) against this machine's: the
+same pictures (the test MIDlet at frame 300, Doom RPG at 1500 through
+Chimera's headless runner). The Java heaps differ in about a thousand
+8-byte words, all but six of them addresses moved by the same 0x3f000 - the
+two core files are of different sizes, so memory is placed differently; the
+six are not traced. Each package is the same machine run to run (CI ran
+the determinism tests on its own build).
+
 ## Not done
 
 - **Games** were run to their menus and a little further (above); none
