@@ -44,11 +44,12 @@ static int g_keys, g_touch, g_x, g_y;
 static uint32_t *g_video;
 static int g_videoCap, g_videoW, g_videoH;
 static int16_t g_audio[DRIVER_AUDIO_FRAMES * 2];
+static int g_newPicture;
 
 static JNIEnv *g_env;
 static jclass g_frontend;
 static jmethodID g_start, g_frame;
-static jfieldID g_lcd, g_w, g_h, g_audioField, g_errorField;
+static jfieldID g_lcd, g_w, g_h, g_audioField, g_errorField, g_newPictureField;
 
 void driver_add_option(const char *opt)
 {
@@ -101,7 +102,8 @@ static int find_frontend(void)
 	g_h = (*env)->GetStaticFieldID(env, c, "height", "I");
 	g_audioField = (*env)->GetStaticFieldID(env, c, "audio", "[S");
 	g_errorField = (*env)->GetStaticFieldID(env, c, "error", "Ljava/lang/String;");
-	if (!g_start || !g_frame || !g_lcd || !g_w || !g_h || !g_audioField || !g_errorField) {
+	g_newPictureField = (*env)->GetStaticFieldID(env, c, "newPicture", "Z");
+	if (!g_start || !g_frame || !g_lcd || !g_w || !g_h || !g_audioField || !g_errorField || !g_newPictureField) {
 		describe_exception("the front end (chimera.Frontend) is not the one this core was built with");
 		return 0;
 	}
@@ -156,6 +158,7 @@ static void copy_outputs(void)
 	if (a)
 		(*env)->GetShortArrayRegion(env, a, 0, DRIVER_AUDIO_FRAMES * 2, (jshort *)g_audio);
 	(*env)->DeleteLocalRef(env, a);
+	g_newPicture = (*env)->GetStaticBooleanField(env, g_frontend, g_newPictureField) ? 1 : 0;
 }
 
 static int do_frame(void)
@@ -303,3 +306,4 @@ const uint32_t *driver_video(int *w, int *h)
 }
 
 const int16_t *driver_audio(void) { return g_audio; }
+int driver_new_picture(void) { return g_newPicture; }

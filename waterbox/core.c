@@ -86,6 +86,27 @@ static int ends_with(const char *s, const char *tail)
 	return n >= t && strcasecmp(s + n - t, tail) == 0;
 }
 
+#ifndef CHIMERA_GUEST
+/* the native runner's files are the work folder's: a copy where the guest
+ * has memfs_import */
+static int copy_file(const char *from, const char *to)
+{
+	FILE *in = fopen(from, "rb");
+	if (!in)
+		return 0;
+	FILE *out = fopen(to, "wb");
+	int ok = out != NULL;
+	char buf[65536];
+	size_t n;
+	while (ok && (n = fread(buf, 1, sizeof buf, in)) > 0)
+		ok = fwrite(buf, 1, n, out) == n;
+	fclose(in);
+	if (out && fclose(out) != 0)
+		ok = 0;
+	return ok;
+}
+#endif
+
 /* ---- Chimera's calls ---------------------------------------------------- */
 ECL_EXPORT const char *GetLoadError(void) { return g_loadError; }
 ECL_EXPORT const char *SuggestSettings(void) { return "{\"values\":{},\"note\":\"\",\"firmware\":[]}"; }
@@ -164,13 +185,39 @@ ECL_EXPORT int Init(void)
 	}
 
 	/* the settings, as FreeJ2ME's own */
-	char size[32], phone[32], fps[16], sound[8], synths[8], encoding[16];
+	char size[32], phone[32], fps[16], sound[8], synths[8], encoding[16], persp[16], quality[16], doja[16];
 	setting("screenSize", "240x320", size, sizeof size);
 	setting("phone", "Standard", phone, sizeof phone);
 	setting("fpsLimit", "60", fps, sizeof fps);
 	setting("sound", "on", sound, sizeof sound);
 	setting("midiSynths", "4", synths, sizeof synths);
 	setting("textEncoding", "auto", encoding, sizeof encoding);
+	setting("m3gPerspectiveCorrection", "app", persp, sizeof persp);
+	setting("m3gPerspectiveQuality", "high", quality, sizeof quality);
+	setting("dojaVersion", "200", doja, sizeof doja);
+	const int soundfont = wbx_setting_bool("customSoundfont", 0);
+	if (strcmp(fps, "off")) {
+		const int n = atoi(fps);
+		if (n < 2 || n > 80) {
+			snprintf(g_loadError, sizeof g_loadError, "the frame limit %s is not one this core has: 2 to 80, or off", fps);
+			return 0;
+		}
+	}
+
+	/* the soundfont (chimera#301): the firmware, where FreeJ2ME looks for
+	 * one, the first .sf2 in freej2me_system/customMIDI */
+	if (soundfont) {
+		mkdir("freej2me_system", 0755);
+		mkdir("freej2me_system/customMIDI", 0755);
+#ifdef CHIMERA_GUEST
+		if (!memfs_import("soundfont.sf2", "/freej2me_system/customMIDI/soundfont.sf2")) {
+#else
+		if (!copy_file("soundfont.sf2", "freej2me_system/customMIDI/soundfont.sf2")) {
+#endif
+			snprintf(g_loadError, sizeof g_loadError, "'Use custom MIDI soundfont' is on and the soundfont (soundfont.sf2) is not there");
+			return 0;
+		}
+	}
 	int width = 240, height = 320;
 	if (sscanf(size, "%dx%d", &width, &height) != 2 || width < 16 || height < 16 || width * height > MAX_PIXELS) {
 		snprintf(g_loadError, sizeof g_loadError, "the screen size %s is not one this core has", size);
@@ -200,19 +247,42 @@ ECL_EXPORT int Init(void)
 	mkdir("home", 0755);
 	mkdir("tmp", 0755);
 
-	static char fj[8][300];
-	snprintf(fj[0], sizeof fj[0], "scrwidth=%d", width);
-	snprintf(fj[1], sizeof fj[1], "scrheight=%d", height);
-	snprintf(fj[2], sizeof fj[2], "phone=%s", phone);
-	snprintf(fj[3], sizeof fj[3], "fps=%s", strcmp(fps, "off") ? fps : "0");
-	snprintf(fj[4], sizeof fj[4], "sys.sound=%s", sound);
-	snprintf(fj[5], sizeof fj[5], "sys.numsynths=%s", synths);
-	snprintf(fj[6], sizeof fj[6], "chimera.savedata=%.256s", savedata);
-	const char *fjs[7] = { fj[0], fj[1], fj[2], fj[3], fj[4], fj[5], fj[6] };
+	/* FreeJ2ME's compatibility settings, under its own names (chimera#301) */
+	static const struct { const char *ours, *fj; int dflt; } compat[] = {
+		{ "compatFantasyZoneFix", "compatfantasyzonefix", 0 },
+		{ "compatTranslateToOrigin", "compattranstooriginonreset", 0 },
+		{ "compatImmediateRepaints", "compatimmediaterepaints", 0 },
+		{ "compatRepaintOnSetCurrent", "compatrepaintonsetcurrent", 0 },
+		{ "compatNoTranslateDrawRGB", "compatnotranslatedrawrgb", 0 },
+		{ "compatOverridePlatformChecks", "compatoverrideplatchecks", 1 },
+		{ "compatSiemensDrawing", "compatsiemensfriendlydrawing", 0 },
+		{ "compatIgnoreVolumeChanges", "compatignorevolumechanges", 0 },
+		{ "compatMascotV3FovFix", "compatmcv3horizfovfix", 0 },
+	};
+	enum { NCOMPAT = sizeof compat / sizeof compat[0] };
+	static char fj[11 + NCOMPAT][300];
+	int nfj = 0;
+	snprintf(fj[nfj++], sizeof fj[0], "scrwidth=%d", width);
+	snprintf(fj[nfj++], sizeof fj[0], "scrheight=%d", height);
+	snprintf(fj[nfj++], sizeof fj[0], "phone=%s", phone);
+	snprintf(fj[nfj++], sizeof fj[0], "fps=%s", strcmp(fps, "off") ? fps : "0");
+	snprintf(fj[nfj++], sizeof fj[0], "sys.sound=%s", sound);
+	snprintf(fj[nfj++], sizeof fj[0], "sys.numsynths=%s", synths);
+	snprintf(fj[nfj++], sizeof fj[0], "m3gperspcorrmode=%s", persp);
+	snprintf(fj[nfj++], sizeof fj[0], "m3gperspcorrsubfactor=%s", quality);
+	snprintf(fj[nfj++], sizeof fj[0], "dojaversion=%s", doja);
+	snprintf(fj[nfj++], sizeof fj[0], "sys.soundfont=%s", soundfont ? "Custom" : "Default");
+	for (int i = 0; i < NCOMPAT; i++)
+		snprintf(fj[nfj++], sizeof fj[0], "%s=%s", compat[i].fj, wbx_setting_bool(compat[i].ours, compat[i].dflt) ? "on" : "off");
+	if (savedata[0])
+		snprintf(fj[nfj++], sizeof fj[0], "chimera.savedata=%.256s", savedata);
+	const char *fjs[11 + NCOMPAT];
+	for (int i = 0; i < nfj; i++)
+		fjs[i] = fj[i];
 
 	g_picture = alloc_invisible(MAX_PIXELS * sizeof(uint32_t));
 	driver_set_video_buffer(g_picture, MAX_PIXELS);
-	if (!driver_start(CORE_CLASSPATH, game, width, height, fjs, savedata[0] ? 7 : 6)) {
+	if (!driver_start(CORE_CLASSPATH, game, width, height, fjs, nfj)) {
 		snprintf(g_loadError, sizeof g_loadError, "%s", driver_error());
 		return 0;
 	}
@@ -270,7 +340,10 @@ ECL_EXPORT void FrameAdvance(uint64_t packed)
 
 /* J2ME games are told of a key as it changes, not asked to look: every
  * frame counts as one that read its input. */
-ECL_EXPORT int InputWasRead(void) { return 1; }
+/* A frame is lag when the game gave the phone's screen no new picture in it
+ * (chimera#301): FreeJ2ME hands the game's keys over through a queue, so the
+ * game never misses a key, but many games draw 12 to 25 pictures a second. */
+ECL_EXPORT int InputWasRead(void) { return g_running && driver_new_picture(); }
 ECL_EXPORT void SetRenderingEnabled(int on) { g_render = on != 0; }
 
 ECL_EXPORT uint32_t *GetVideoBgra(void)

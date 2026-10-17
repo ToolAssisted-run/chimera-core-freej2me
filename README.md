@@ -48,8 +48,12 @@ start from saved data: the zip Export Save Data writes.
   9, Star, Pound and Clear.
 - **Touch screen**: Touch, held where Touch X and Touch Y say.
 - **Settings**: Screen Size, Phone Keys (which maker's key codes the keys
-  send), Frame Limit, Sound, MIDI Synthesizers and Text Encoding. All of them
+  send), Frame Limit (2 to 80 pictures a second, or off), Sound, MIDI
+  Synthesizers, Text Encoding, FreeJ2ME-Plus's nine compatibility settings,
+  M3G perspective correction and its quality, the DoJa API version, and a
+  MIDI soundfont of your own (an .sf2 file, given as firmware). All of them
   are part of the machine: a movie needs the same values.
+- **Lag**: a frame in which the game drew no new picture is a lag frame.
 
 ## Building and testing
 

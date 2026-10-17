@@ -313,13 +313,95 @@ picture in its own shape, upright or on its side. New test
 360x640 screen, the sandbox runner's own at frame 121. It failed with the
 old package (30 passed, 1 failed) and passes with the new one (31 passed).
 
+## 2026-10-17 - settings, lag frames, a soundfont, a smaller core (chimera#301, user-decided)
+
+A user asked for more of FreeJ2ME-Plus's settings; the owner chose all four
+groups.
+
+- **Settings.** FreeJ2ME-Plus's nine compatibility settings, each a project
+  setting under FreeJ2ME's own label and with its explanation in plain words
+  (Override Mobile Platform checks on, as in FreeJ2ME; the rest off). The
+  frame limit takes 2 to 80 pictures a second or off (it was 60, 30, 20, 15
+  or off; those stay valid, so older projects open unchanged). M3G
+  perspective correction (Always Disabled, App-Controlled, Force-Enabled)
+  and its quality (Extra, High, Average, Low), and the DoJa API version
+  (DoJa-1.0 to Star-2.0), with FreeJ2ME's labels as the options' labels.
+  core.c hands each to FreeJ2ME under FreeJ2ME's own name, before the game
+  runs, as before.
+- **Lag frames.** FreeJ2ME passes keys to the game through a queue, so a
+  game never misses one, and "the game did not read the controls" never
+  happened: every frame was reported read. A frame is now lag when the game
+  gave the screen no new picture in it. FreeJ2ME calls the front end's
+  painter once for each picture the game finishes (flushGraphics and the
+  Canvas repaint both end there); the front end counts the calls, and a
+  frame in which the count did not move is lag. Many J2ME games draw 12 to
+  25 pictures a second, so many frames are lag frames.
+- **Soundfont.** A setting, Use custom MIDI soundfont, and a firmware file,
+  soundfont.sf2, asked for only when it is on. It has no fixed hash: any
+  soundfont is taken, and the project records which file it was (the frontend
+  does this for every firmware declared without a hash). The core puts it
+  where FreeJ2ME looks for one (freej2me_system/customMIDI) and sets
+  FreeJ2ME's soundfont setting to Custom. FreeJ2ME goes on with Java's own
+  sounds when a soundfont does not load; the core refuses the project
+  instead, and says so. The soundfont is in the machine's memory, so a large
+  one makes every savestate larger by about its size.
+
+  Two things were found on the way. FreeJ2ME opened the soundfont as a file,
+  and Java's synthesizer then reads such a soundfont's samples from the file
+  note by note; patch freej2me-plus/0001 reads it whole, as Java reads its
+  own soundbank. And even then the music had a gap of about a second after
+  starting (the test MIDlet: 55 of 300 frames silent once it began). The
+  cause was Java's "jitter correction": a thread in the synthesizer that
+  keeps time by the clock and sleeps, between the synthesizer and the sound
+  line. The core's sound line already makes the synthesizer wait for each
+  frame, and the two fought whenever the synthesizer had been busy (loading
+  the soundfont into synthesizers that were already open is enough: loading
+  Java's own soundbank a second time gave the same gap). It is now off, set
+  through the synthesizer's stored settings before any synthesizer opens.
+  This changes every game's sound, not only with a soundfont: the test
+  MIDlet's tune is heard from frame 3 instead of 27, and a tune started by
+  a key is heard 4 frames after it instead of 12. It is a different machine:
+  a movie made with an earlier build may not play back the same where a
+  game waits on its music.
+- **Frame limits above 60.** FreeJ2ME moves a ticker and an animated gauge
+  by 60 divided by the limit each picture, which is 0 above 60, so they
+  stood still. Patch freej2me-plus/0002 moves them by 1 a picture there, as
+  with no limit.
+- **A smaller core.** The runtime packed into the core was already only what
+  runs: a jlink image of four modules (java.base, java.desktop, java.prefs,
+  jdk.charsets), without debugging attributes, headers or manual pages, and
+  none of the JDK's tools. What was left to remove was core.wbx's own
+  debugging information, 24 MB of it, which nothing in the sandbox reads:
+  build-guest.sh now strips it (the function names stay, for a crash
+  report). core.wbx went from 108.8 MB to 84.8 MB, the package from 40.7 MB
+  to 32.8 MB. Compressing the runtime's class archive (jlink --compress) was
+  measured and rejected: the archive went from 56.8 to 26.2 MB, but the
+  package is a zip, and a compressed archive compresses worse - 25.1 MB
+  zipped against 17.9 MB, a bigger download.
+
+New tests, each seen to fail with its part taken out: `j2me:lag` (lag
+frames in 300: 146 at Frame Limit 60, 226 at 15, 289 at 2; 0 at every limit
+without it), `settings:freej2me` (FreeJ2ME's own settings file holds the
+project's values; the DoJa version left out showed 200),
+`j2me:sound-start` (the tune from frame 3; 27 with jitter correction),
+`j2me:soundfont` (another sound than Java's own, no silent frame once the
+tune starts, and the same through savestates around every frame),
+`engine:soundfont` (a project with the soundfont as firmware plays in
+Chimera's headless runner to the sandbox runner's picture; without the
+firmware the core refuses to start and the test fails; the two runners'
+Java heaps differ in 586 bytes of object addresses, so the picture is
+compared), `package:no-debug-info`, and three refusals (no soundfont, a
+soundfont that is not one, a frame limit of 1).
+`box:resume` now compares the lag frames since the load: the runner counts
+them from its own start, so a resumed run's running total starts at 0.
+
+## Not done
 
 - **Games** were run to their menus and a little further (above); none
   was played through.
 - **DoJa (i-appli)** games: not tried, for want of one. Their scratchpad
   (DoJa's save data) is not in the export yet.
-- CI has not run (the repository is not public).
 - At start-up something in the JDK asks for a socket (IPv4, stream), which
   the sandbox refuses and says so once; not traced yet.
-- FreeJ2ME's rotation and its compatibility and speed settings are not
-  offered yet.
+- FreeJ2ME's rotation, its speed settings and its other M3G settings
+  (anti-aliasing, filtering, dithering, mipmaps, fog) are not offered yet.

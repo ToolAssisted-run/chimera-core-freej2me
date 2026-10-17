@@ -158,6 +158,10 @@ g++ -specs="$sr/lib/musl-gcc.specs" -mcmodel=large -fno-pic -fno-pie \
 	"$mbuild/source/guest/cxxglue.c.o" "$mbuild/source/guest/emulibc.c.o" \
 	"$g/libffi/lib/libffi.a" \
 	-L"$sr/lib" -lstdc++ -lgcc -lgcc_eh -lc
+# no debugging information: it was a fifth of the file, and nothing in the
+# sandbox reads it. The function names stay, for a crash report
+# (chimera#301: core.wbx 108.8 MB to 84.8 MB, the package 40.7 MB to 32.8 MB)
+strip --strip-debug "$g/core.wbx"
 sh "$mb/source/guest/check-wbx.sh" "$g/core.wbx"
 echo "built $g/core.wbx"
 

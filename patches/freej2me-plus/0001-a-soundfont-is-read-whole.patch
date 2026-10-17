@@ -1,0 +1,19 @@
+diff --git a/src/javax/microedition/media/Manager.java b/src/javax/microedition/media/Manager.java
+index 23447249..43508579 100644
+--- a/src/javax/microedition/media/Manager.java
++++ b/src/javax/microedition/media/Manager.java
+@@ -346,7 +346,13 @@ public class Manager
+ 			try
+ 			{
+ 				// Load the first .sf2 font available, if there's none that's valid, don't set any and use JVM's default
+-				customSoundfont = MidiSystem.getSoundbank(new File(soundfontDir, fontfile[0]));
++				// Chimera: read whole, as Java reads its own soundbank. Opened
++				// as a File, the synthesizer reads the samples from the file
++				// note by note, and in the core's sandbox that made it fall
++				// behind the music (chimera#301)
++				InputStream in = new java.io.BufferedInputStream(new java.io.FileInputStream(new File(soundfontDir, fontfile[0])));
++				try { customSoundfont = MidiSystem.getSoundbank(in); }
++				finally { in.close(); }
+ 			}
+ 			catch (Exception e) { Mobile.log(Mobile.LOG_ERROR, Manager.class.getPackage().getName() + "." + Manager.class.getSimpleName() + ": " + "Could not load soundfont into synth: " + e.getMessage());}
+ 		}

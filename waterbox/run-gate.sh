@@ -116,6 +116,9 @@ for src in "$here"/core.c "$here"/driver.c "$here"/driver.h "$here"/guest-shims.
 done
 check "package:fresh" "core.wbx is not older than its sources${stale:+ (older than:$stale)}" [ -z "$stale" ]
 
+check "package:no-debug-info" "core.wbx carries no debugging information, which nothing in the sandbox reads ($(stat -c %s "$core") bytes)" \
+	sh -c "! readelf -S '$core' | grep -q '\.debug_'"
+
 folder t '{}' "$midlet"
 "$runwbx" "$core" "$work/t" --frames 1 --list-panel > "$work/panel.out" 2> /dev/null
 check "package:controls" "the package declares the core's own $(grep -c '^panel' "$work/panel.out") buttons, in the core's order, and its 2 axes" \
@@ -155,6 +158,19 @@ box quiet q --frames 300 --report 30
 check "j2me:sound" "the MIDI tune plays: $(sounds "$work/idle.out") different sounds in 10 reports; with Sound off the same reports are $(sounds "$work/quiet.out") sound (silence)" \
 	cond '[ "$(sounds "$work/idle.out")" -ge 8 ] && [ "$(sounds "$work/quiet.out")" = 1 ] && [ "$(lines "$work/quiet.out")" = 10 ]'
 
+# the tune is heard within 10 frames of the MIDlet starting it (frame 3):
+# with Java's jitter corrector it started at frame 27 (chimera#301)
+box start t --frames 60 --report 60 --aud-out "$work/start.raw"
+first="$(python3 - "$work/start.raw" <<'PY'
+import struct, sys
+d = open(sys.argv[1], "rb").read()
+s = struct.unpack("<%dh" % (len(d) // 2), d)
+print(next((f for f in range(len(s) // 1470) if any(s[f * 1470:(f + 1) * 1470])), -1))
+PY
+)"
+check "j2me:sound-start" "the MIDI tune is heard from frame $first (within 10 frames: the synthesizer is paced by the frames alone)" \
+	cond '[ "$first" -ge 0 ] && [ "$first" -le 10 ]'
+
 box sfx t --frames 300 --report 30 --press "$num5":150:1 --press "$fire":180:1
 check "j2me:effects" "a beep (a WAV clip) on Num 5 at frame 150 and a tone on Fire at 180: the sound is the idle run's before frame 150 and differs from it on" \
 	same_until "$work/idle.out" "$work/sfx.out" 149
@@ -175,6 +191,71 @@ PY
 )"
 check "j2me:japanese" "the MIDlet's Japanese line is drawn with the Japanese font: its pixels are the ones IPAex Gothic draws ($jp)" \
 	[ "$jp" = 45e873e52c9738ffd85979366fa28a30ef088ea0 ]
+
+# ------------------------------------------------- settings, lag and the soundfont (chimera#301)
+# A frame is lag when the game gave the screen no new picture in it. The
+# MIDlet draws, then sleeps 33 ms: about 30 pictures a second, fewer under a
+# lower frame limit. lag <file>: the lag frames at the last report.
+lag() { stream "$1" | tail -1 | awk '{print $NF}'; }
+folder f15 '{"fpsLimit":"15"}' "$midlet"
+folder f2 '{"fpsLimit":"2"}' "$midlet"
+box f15 f15 --frames 300 --report 30
+box f2 f2 --frames 300 --report 30
+check "j2me:lag" "a frame with no new picture is lag: in 300 frames, $(lag "$work/idle.out") at Frame Limit 60 (the MIDlet draws about 30 a second), $(lag "$work/f15.out") at 15, $(lag "$work/f2.out") at 2" \
+	cond '[ "$(lag "$work/idle.out")" -ge 100 ] && [ "$(lag "$work/idle.out")" -le 200 ] && [ "$(lag "$work/f15.out")" -ge 200 ] && [ "$(lag "$work/f15.out")" -le 250 ] && [ "$(lag "$work/f2.out")" -ge 280 ] && [ "$(lag "$work/f2.out")" -lt 300 ]'
+
+# the settings FreeJ2ME writes into its own settings file (natively, where
+# the files are the work folder's): the project's values, under FreeJ2ME's
+# names
+if [ -x "$native" ]; then
+	folder nset '{"fpsLimit":"7","compatRepaintOnSetCurrent":true,"compatOverridePlatformChecks":false,"m3gPerspectiveCorrection":"on","m3gPerspectiveQuality":"low","dojaVersion":"35"}' "$midlet"
+	nat nset nset --frames 5
+	conf="$(find "$work/nset" -name game.conf | head -1)"
+	check "settings:freej2me" "the project's settings are FreeJ2ME's own: its settings file says $(grep -E '^(fps|compatrepaintonsetcurrent|compatoverrideplatchecks|m3gperspcorrmode|m3gperspcorrsubfactor|dojaversion):' "$conf" 2>/dev/null | sort | tr '\n' ' ')" \
+		cond '[ -n "$conf" ] && [ "$(grep -E "^(fps|compatrepaintonsetcurrent|compatoverrideplatchecks|m3gperspcorrmode|m3gperspcorrsubfactor|dojaversion):" "$conf" | sort | tr "\n" " ")" = "compatoverrideplatchecks:off compatrepaintonsetcurrent:on dojaversion:35 fps:7 m3gperspcorrmode:on m3gperspcorrsubfactor:low " ]'
+else
+	report "settings:freej2me" SKIP "build/bin/run-native is not built (waterbox/build-native.sh)"
+fi
+
+# the soundfont: a copy of the sounds Java comes with here, at half the
+# volume, so the tune is the same notes and another sound
+sf2="$root/build/soundbank/soundbank-emg.sf2"
+if [ -f "$sf2" ]; then
+	folder sf '{"customSoundfont":true}' "$midlet"
+	python3 - "$sf2" "$work/sf/soundfont.sf2" <<'PY'
+import struct, sys
+d = bytearray(open(sys.argv[1], "rb").read())
+def walk(at, end):
+    while at + 8 <= end:
+        cid, size = d[at:at + 4], struct.unpack_from("<I", d, at + 4)[0]
+        if cid == b"LIST":
+            walk(at + 12, at + 8 + size)
+        elif cid == b"smpl":
+            for i in range(at + 8, at + 8 + size - 1, 2):
+                struct.pack_into("<h", d, i, struct.unpack_from("<h", d, i)[0] // 2)
+        at += 8 + size + (size & 1)
+walk(12, len(d))
+open(sys.argv[2], "wb").write(d)
+PY
+	box sf sf --frames 300 --report 30 --state-hash --aud-out "$work/sf.raw"
+	box sfrr sf --frames 300 --report 30 --state-hash --rerecord
+	box sfdef t --frames 300 --report 300 --aud-out "$work/sfdef.raw"
+	# the frames with sound in them, and the silent ones after the first
+	gaps() { python3 - "$1" <<'PY'
+import struct, sys
+d = open(sys.argv[1], "rb").read()
+s = struct.unpack("<%dh" % (len(d) // 2), d)
+peaks = [max(abs(v) for v in s[f * 1470:(f + 1) * 1470]) for f in range(len(s) // 1470)]
+first = next((i for i, v in enumerate(peaks) if v), len(peaks))
+print(sum(1 for v in peaks if v), sum(1 for v in peaks[first:] if not v))
+PY
+}
+	sfg="$(gaps "$work/sf.raw")"; defg="$(gaps "$work/sfdef.raw")"
+	check "j2me:soundfont" "with Use custom MIDI soundfont, the tune plays with the project's soundfont: another sound than Java's own, $(echo "$sfg" | awk '{print $1}') of 300 frames with sound and $(echo "$sfg" | awk '{print $2}') silent once it started (Java's own: $(echo "$defg" | awk '{print $1}') and $(echo "$defg" | awk '{print $2}')), and saved and loaded around every frame it is the straight run" \
+		cond '[ "$(echo "$sfg" | awk "{print \$2}")" = 0 ] && [ "$(echo "$sfg" | awk "{print \$1}")" -ge 250 ] && ! cmp -s "$work/sf.raw" "$work/sfdef.raw" && same "$work/sf.out" "$work/sfrr.out"'
+else
+	report "j2me:soundfont" SKIP "build/soundbank/soundbank-emg.sf2 is not built (waterbox/build-java.sh)"
+fi
 
 # ------------------------------------------------- save data and memory
 # the MIDlet saves its score in a record store every 30 of its frames, and
@@ -252,9 +333,14 @@ check "box:session" "saved at frame 150 and loaded into a new host, the run is t
 box sv t $play --save-at 150 "$work/at150.state"
 # shellcheck disable=SC2086
 box rs t $play --resume "$work/at150.state" 150 --state-hash
-awk '$1 == "state" || ($1 == "frame" && $2 > 150)' "$work/a.out" > "$work/a-after150.out"
-check "box:resume" "a state written to a file before frame 150 and loaded by another process: the reports from there and the state at the end are the straight run's" \
-	cond '[ "$(lines "$work/rs.out")" = 15 ] && same "$work/a-after150.out" "$work/rs.out"'
+# the runner counts lag frames from its own start, so the resumed run's
+# count is compared as the frames since 150 (a frame with no new picture is
+# lag)
+awk '$1 == "state" || ($1 == "frame" && $2 > 150)' "$work/a.out" | sed 's/ lag [0-9]*$//' > "$work/a-after150.out"
+sed 's/ lag [0-9]*$//' "$work/rs.out" > "$work/rs-nolag.out"
+lag150="$(stream "$work/a.out" | awk '$2 == 150 {print $NF}')"
+check "box:resume" "a state written to a file before frame 150 and loaded by another process: the reports from there, the lag frames since ($(lag "$work/rs.out")) and the state at the end are the straight run's" \
+	cond '[ "$(lines "$work/rs.out")" = 15 ] && same "$work/a-after150.out" "$work/rs-nolag.out" && [ "$(lag "$work/rs.out")" = "$(( $(lag "$work/a.out") - lag150 ))" ]'
 box rw t --frames 300 --report 5 --press "$right":60:30 --press "$fire":70:1 --rewind
 check "box:rewind" "a state kept at frame 150 and loaded at 225: the frames after the load repeat those after the save" \
 	repeats "$work/rw.out" 150 225 75 5
@@ -302,6 +388,17 @@ fi
 folder none '{}'
 box none none --frames 1
 check "refused:no-game" "a machine with no game is refused, and says so" grep -q "Init failed.*no game was given" "$work/none.out" "$work/none.err"
+
+folder nosf '{"customSoundfont":true}' "$midlet"
+box nosf nosf --frames 1
+check "refused:no-soundfont" "Use custom MIDI soundfont with no soundfont is refused, and says so" grep -q "Init failed.*soundfont.*is not there" "$work/nosf.out" "$work/nosf.err"
+folder badsf '{"customSoundfont":true}' "$midlet"
+head -c 4096 /dev/zero > "$work/badsf/soundfont.sf2"
+box badsf badsf --frames 1
+check "refused:bad-soundfont" "a soundfont that is not a SoundFont 2 file is refused, and says so" grep -q "Init failed.*could not be read as a SoundFont 2 file" "$work/badsf.out" "$work/badsf.err"
+folder fps1 '{"fpsLimit":"1"}' "$midlet"
+box fps1 fps1 --frames 1
+check "refused:frame-limit" "a frame limit outside 2 to 80 is refused, and says so" grep -q "Init failed.*frame limit 1 is not one" "$work/fps1.out" "$work/fps1.err"
 
 # ------------------------------------------------- the native runner
 if [ -x "$native" ]; then
@@ -375,10 +472,42 @@ r = open(sys.argv[2], "rb").read()
 nl = r.index(b"\n")
 sys.exit(0 if (w, h) == (360, 640) and r[:nl].split() == [b"360", b"640"] and b"".join(rows) == r[nl + 1:] else 1)
 PY
+	# the soundfont as the project's firmware: Chimera mounts it under its id
+	# and the machine is the sandbox runner's with the same file (without the
+	# file the core refuses to start, and there is no picture)
+	if [ -f "$work/sf/soundfont.sf2" ]; then
+		mkdir -p "$work/projsf"
+		cp "$midlet" "$work/projsf/"
+		python3 "$root/tests/make-project.py" "$package" "$work/projsf/sf.chimeraProject" 200 \
+			customSoundfont=true firmware=soundfont.sf2="$work/sf/soundfont.sf2" panel="$work/panel.out" \
+			-- game="$work/projsf/$(basename "$midlet")" > /dev/null
+		"$runner" --project "$work/projsf/sf.chimeraProject" "$package" --files "$work/projsf" \
+			--firmware soundfont.sf2="$work/sf/soundfont.sf2" --frames 200 --screenshot 120="$work/enginesf.tga" > "$work/enginesf.log" 2>&1
+		box engsf sf --frames 121 --report 121 --vid-out "$work/engsf.raw"
+		check "engine:soundfont" "a project with Use custom MIDI soundfont and the soundfont as its firmware plays in Chimera's headless runner to the sandbox runner's picture at frame 121" \
+			python3 - "$work/enginesf.tga" "$work/engsf.raw" <<'PY'
+import struct, sys
+try:
+    d = open(sys.argv[1], "rb").read()
+except OSError:
+    sys.exit(1)
+w, h = struct.unpack("<HH", d[12:16])
+px = d[18 + d[0]:]
+rows = [px[y * w * 4:(y + 1) * w * 4] for y in range(h)]
+if not d[17] & 0x20:
+    rows = rows[::-1]
+r = open(sys.argv[2], "rb").read()
+nl = r.index(b"\n")
+sys.exit(0 if r[:nl].split() == [str(w).encode(), str(h).encode()] and b"".join(rows) == r[nl + 1:] else 1)
+PY
+	else
+		report "engine:soundfont" SKIP "no soundfont was made (build/soundbank/soundbank-emg.sf2 is not built)"
+	fi
 else
 	report "engine:boot" SKIP "needs CHIMERA_ROOT with build/dll/chimera-run and build/Cores/freej2me.chimeraCore"
 	report "engine:resume" SKIP "needs CHIMERA_ROOT with build/dll/chimera-run and build/Cores/freej2me.chimeraCore"
 	report "engine:screen-size" SKIP "needs CHIMERA_ROOT with build/dll/chimera-run and build/Cores/freej2me.chimeraCore"
+	report "engine:soundfont" SKIP "needs CHIMERA_ROOT with build/dll/chimera-run and build/Cores/freej2me.chimeraCore"
 fi
 
 echo

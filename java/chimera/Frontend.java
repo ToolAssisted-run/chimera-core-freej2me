@@ -20,6 +20,8 @@ import java.io.InputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import javax.microedition.media.Manager;
+
 import org.recompile.mobile.Mobile;
 import org.recompile.mobile.MobilePlatform;
 
@@ -35,6 +37,11 @@ public final class Frontend
 	public static final short[] audio = new short[2 * AUDIO_FRAMES];
 	/* why start() failed */
 	public static String error = "";
+	/* whether the game gave the screen a new picture in the last frame: a
+	   frame without one is a lag frame (chimera#301) */
+	public static boolean newPicture;
+	/* pictures given so far: FreeJ2ME calls the painter once for each */
+	private static volatile int pictures;
 
 	private static final long FRAME_NANOS = 16_666_667L;
 
@@ -52,10 +59,17 @@ public final class Frontend
 		// As the libretro front end: an exit request from the game does not
 		// end the process.
 		MobilePlatform.isLibretro = true;
+		// Java's synthesizer, by default, renders through a "jitter
+		// corrector": a thread that keeps time by the clock and sleeps. Here
+		// the sound line already makes the synthesizer wait for each frame
+		// (chimera.sound.Bus), and the two fought: music started 0.4 s late,
+		// and after a soundfont was loaded it fell silent for a second
+		// (chimera#301). The synthesizer reads this setting when it opens.
+		java.util.prefs.Preferences.userRoot().node("/com/sun/media/sound/softsynthesizer").put("jitter correction", "false");
 		width = w;
 		height = h;
 		Mobile.setPlatform(new MobilePlatform(w, h), new Runnable() { public void run() { settingsChanged(); } });
-		Mobile.getPlatform().setPainter(new Runnable() { public void run() { } });
+		Mobile.getPlatform().setPainter(new Runnable() { public void run() { pictures++; } });
 		front = Mobile.getPlatform().getLcdFrontbuffer().getDataBuffer();
 		lcd = new int[front.length];
 
@@ -85,6 +99,13 @@ public final class Frontend
 		Mobile.config.saveConfig();
 		Mobile.config.saveSystemConfig();
 		settingsChanged();
+		// FreeJ2ME goes on with Java's own sounds when a soundfont does not
+		// load; a project that asked for one is told instead (chimera#301)
+		if (Mobile.useCustomMidi && Manager.getCustomSoundfont() == null)
+		{
+			error = "the soundfont (soundfont.sf2) could not be read as a SoundFont 2 file";
+			return false;
+		}
 		Mobile.getPlatform().runJar();
 		return true;
 	}
@@ -93,6 +114,7 @@ public final class Frontend
 	   touch: the screen is touched at (x, y), in pixels of the picture. */
 	public static void frame(int keys, boolean touch, int x, int y)
 	{
+		final int picturesBefore = pictures;
 		for (int i = 0; i < 20; i++)
 		{
 			final boolean now = ((keys >> i) & 1) != 0, was = ((held >> i) & 1) != 0;
@@ -124,6 +146,7 @@ public final class Frontend
 
 		try { Thread.sleep(FRAME_NANOS / 1_000_000L, (int)(FRAME_NANOS % 1_000_000L)); }
 		catch (InterruptedException e) { }
+		newPicture = pictures != picturesBefore;
 
 		synchronized (Mobile.getPlatform().getLcdFrontbuffer())
 		{

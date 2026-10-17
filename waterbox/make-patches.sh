@@ -12,6 +12,8 @@ root="$(cd "$here/.." && pwd)"
 series='
 jdk21u|0001-linked-in-libraries-are-found|src/hotspot/share/runtime/os.cpp
 jdk21u|0002-zero-pays-for-the-code-it-runs|src/hotspot/share/interpreter/zero/bytecodeInterpreter.cpp
+freej2me-plus|0001-a-soundfont-is-read-whole|src/javax/microedition/media/Manager.java
+freej2me-plus|0002-tickers-and-gauges-move-above-60|src/javax/microedition/lcdui/Ticker.java src/javax/microedition/lcdui/Gauge.java
 '
 
 for sub in jdk21u freej2me-plus libffi; do

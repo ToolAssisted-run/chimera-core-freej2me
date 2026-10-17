@@ -22,5 +22,7 @@ const char *driver_error(void);
 /* the last frame's picture, 0xAARRGGBB, and its 735 frames of 16-bit stereo */
 const uint32_t *driver_video(int *w, int *h);
 const int16_t *driver_audio(void);
+/* whether the game gave the screen a new picture in the last frame */
+int driver_new_picture(void);
 
 #endif
