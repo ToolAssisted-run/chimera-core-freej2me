@@ -21,7 +21,8 @@ New, and not published yet.
   and loading into the story, with music) and The Game of Life. Doom RPG is
   the same through savestates around every one of 1800 frames.
 - Windows: the test MIDlet's project gives the same pictures in Chimera's
-  Windows headless runner as on Linux.
+  Windows headless runner as on Linux, and a state saved on either and
+  loaded by another run continues the same.
 - Not there yet: DoJa (i-appli) games, which need a Japanese font; export
   of a game's saved data; RAM Watch and RAM Search (the core shows no
   memory yet).

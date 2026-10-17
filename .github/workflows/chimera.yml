@@ -147,7 +147,7 @@ jobs:
           [ "$rc" -eq 0 ]
           for t in source:patched package:fresh package:controls package:key-names j2me:runs j2me:keys j2me:touch \
                    j2me:sound j2me:effects j2me:screen-size box:again box:rerecord box:session box:resume box:rewind \
-                   refused:no-game native:runs engine:boot; do
+                   refused:no-game native:runs engine:boot engine:resume; do
             grep -q "^$t  *PASS " gate.out || { echo "$t did not pass"; exit 1; }
           done
 

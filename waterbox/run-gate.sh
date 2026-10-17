@@ -269,8 +269,21 @@ r = open(sys.argv[2], "rb").read()
 nl = r.index(b"\n")
 sys.exit(0 if r[:nl].split() == [str(w).encode(), str(h).encode()] and b"".join(rows) == r[nl + 1:] else 1)
 PY
+	# --state makes the loaded machine the one the movie starts from: the
+	# rest of the run is a project of its own, from row 0
+	python3 "$root/tests/make-project.py" "$package" "$work/proj/long.chimeraProject" 300 \
+		"press=Right:59:30" "press=Fire:69:1" panel="$work/panel.out" -- game="$work/proj/$(basename "$midlet")" > /dev/null
+	python3 "$root/tests/make-project.py" "$package" "$work/proj/rest.chimeraProject" 150 \
+		panel="$work/panel.out" -- game="$work/proj/$(basename "$midlet")" > /dev/null
+	"$runner" --project "$work/proj/long.chimeraProject" "$package" --files "$work/proj" --frames 300 \
+		--save-state 150="$work/proj/at150.state" --screenshot 291="$work/straight291.tga" --screenshot 299="$work/straight299.tga" > "$work/engine2.log" 2>&1
+	"$runner" --project "$work/proj/rest.chimeraProject" "$package" --files "$work/proj" --state "$work/proj/at150.state" --frames 150 \
+		--screenshot 140="$work/resumed140.tga" --screenshot 148="$work/resumed148.tga" > "$work/engine3.log" 2>&1
+	check "engine:resume" "a state Chimera's headless runner saved at frame 150, loaded by another run of it: frames 140 and 148 after the load are the straight run's frames 291 and 299" \
+		cond 'cmp -s "$work/resumed140.tga" "$work/straight291.tga" && cmp -s "$work/resumed148.tga" "$work/straight299.tga" && ! cmp -s "$work/straight291.tga" "$work/straight299.tga"'
 else
 	report "engine:boot" SKIP "needs CHIMERA_ROOT with build/dll/chimera-run and build/Cores/freej2me.chimeraCore"
+	report "engine:resume" SKIP "needs CHIMERA_ROOT with build/dll/chimera-run and build/Cores/freej2me.chimeraCore"
 fi
 
 echo

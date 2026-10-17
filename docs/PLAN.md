@@ -165,14 +165,17 @@ run through WSL from %TEMP%\chimera-freej2me): the pictures at frames 120
 and 299 are identical between the two systems, and so is the picture after
 `chimera-run --rerecord` (a state saved and loaded around every frame).
 
-Open: `chimera-run --state` with a state saved at frame 150 by
-`--save-state` follows the straight run for 60 frames and then departs
-from it, on Linux and on Windows. Saving does not disturb the run (the
-straight run with and without the save is the same, and two saves are the
-same file), and `run-wbx --resume` from a state file in another process is
-identical to the end (the test `box:resume`), as are the baselines two
-processes seal. So the difference is in how that runner continues after
-loading, and is not yet understood.
+`chimera-run --state` with a state saved at frame 150 at first seemed to
+follow the straight run for 60 frames and then depart from it, on Linux and
+on Windows. It does not: `--state` makes the loaded machine the one the
+movie starts from, so the runner plays the movie from its first row again,
+and the test project's Right, held from row 59, was pressed a second time
+59 frames after the load - where the run departed (the score the test
+MIDlet saved differed by two steps of the square). With a project of no
+presses for the rest of the run, the frames after the load are the
+straight run's, on both systems, with a state saved on either: the test
+`engine:resume`. The first form of that test, which replayed the presses,
+is the case of it failing.
 
 ## 2026-10-17 - the first games
 
