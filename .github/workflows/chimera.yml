@@ -17,7 +17,8 @@ name: chimera waterbox core
 #   - the game: tests SKIP here: no commercial game is on a runner;
 #   - the native runner runs the MIDlet (it is not compared with the sandbox:
 #     natively the game's threads run on the host's clock);
-#   - the package plays a project in Chimera's headless runner;
+#   - the package plays a project in Chimera's headless runner and in its
+#     window;
 #   - Chimera's own checks of the package pass.
 #
 # OpenJDK is built here from its source (about 10 minutes on a runner).
@@ -153,6 +154,19 @@ jobs:
             grep -q "^$t  *PASS " gate.out || { echo "$t did not pass"; exit 1; }
           done
 
+      - name: Run the window test
+        # The package loaded by Chimera's own window (under Mono, on a
+        # virtual display): the test MIDlet's Java heap against the headless
+        # runner's, and the keys. Doom RPG skips: no game is on a runner.
+        run: |
+          rc=0
+          bash ./tests/run-frontend.sh --chimera-root "$GITHUB_WORKSPACE/chimera-checkout" > window.out 2>&1 || rc=$?
+          cat window.out
+          [ "$rc" -eq 0 ]
+          for t in window:midlet window:keys; do
+            grep -q "^$t  *PASS " window.out || { echo "$t did not pass"; exit 1; }
+          done
+
       - name: Chimera's checks of the package
         working-directory: chimera-checkout
         env:
@@ -174,7 +188,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: build-logs
-          path: gate.out
+          path: |
+            gate.out
+            window.out
 
   publish:
     # What passed above, published as this core's own release: a rolling `dev`

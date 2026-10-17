@@ -245,14 +245,33 @@ the zip ignored, `memory:heap` with the domain half its size,
 
 The test script: 30 passed, 0 failed, 0 skipped (games and CHIMERA_ROOT).
 
+## 2026-10-17 - in Chimera's window
+
+`tests/run-frontend.sh` (from chimera-core-tic80) runs the package in
+Chimera's window under Mono on an Xvfb display of its own, through a Lua
+script: the test MIDlet project, 300 frames with Right, Fire and Num 5
+pressed, leaves a Java heap whose SHA-256 is the headless runner's
+(`window:midlet`); the key bindings the package ships are the ones Chimera
+adopts (`window:keys`); Doom RPG, 1500 frames through its sound question
+into the game, leaves the headless runner's heap (`window:doom`, SKIP
+without the file). 3 passed, 0 failed, 0 skipped, 47 seconds. Seen to fail:
+`window:keys` against changed bindings, `window:midlet` and `window:doom`
+against a headless run one frame short.
+
+On Windows 11, Chimera's window (the same build, `--headless --chromeless`,
+from %TEMP%\chimera-freej2me) played the same project; its machine at the
+frame the script stopped on is the Linux headless runner's at that frame,
+byte for byte (the Java heap's SHA-256). There the window had run two
+frames before the Lua script began (302 for the script's 300); the movie
+drove those frames too, so this is when the script attaches, not the core.
+
 ## Not done
 
 - **Games** were run to their menus and a little further (above); none
   was played through.
 - **DoJa (i-appli)** games: not tried, for want of one. Their scratchpad
   (DoJa's save data) is not in the export yet.
-- **Windows** was tried in Chimera's headless runner only, not in its
-  window; CI has not run.
+- CI has not run (the repository is not public).
 - At start-up something in the JDK asks for a socket (IPv4, stream), which
   the sandbox refuses and says so once; not traced yet.
 - FreeJ2ME's rotation and its compatibility and speed settings are not

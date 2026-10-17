@@ -103,6 +103,18 @@ their folder in `GAMES_DIR`; each is named and checked by SHA-1 in the script,
 and the test says SKIP where it is absent. Chimera's contract tests run on
 the package too (Chimera's `AGENTS.md`).
 
+## The window test
+
+```sh
+bash tests/run-frontend.sh --chimera-root <chimera checkout>
+```
+
+Runs the package in Chimera's own window (Chimera.exe under Mono, on an Xvfb
+display of its own; needs mono and Xvfb, and Chimera's interface built):
+the test MIDlet's Java heap after 300 frames against the headless
+runner's, the key bindings Chimera adopts from the package, and Doom RPG
+where `tests/games-local` has it. About a minute.
+
 ## Troubleshooting
 
 - *configure says the machine is Windows* (WSL): `build-jdk.sh` passes

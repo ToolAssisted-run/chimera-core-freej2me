@@ -37,6 +37,9 @@ design log, with what was decided, why, and what was measured.
 - `waterbox/waterbox.config`, `file_slots.json`, `default_keybinds.json`,
   `package-licenses.json` - what the package declares.
 - `waterbox/run-wbx.c`, `run-native.c`, `gate-harness.h` - the runners.
+- `tests/run-frontend.sh` - the window test, with `frontend-run.lua`,
+  `exit.lua`, `settings-config.py`, `forget-controller.py` and
+  `check-keybinds.py`.
 - `tests/midlet/` - the test MIDlet; `tests/make-project.py` writes a
   project, `tests/check-key-names.py` checks the default bindings,
   `tests/vid2png.py` turns a runner's picture into a PNG.
@@ -56,6 +59,7 @@ waterbox/build-native.sh -m <miniBox>
 tests/midlet/build.sh
 waterbox/build-package.sh -r <chimera checkout>
 CHIMERA_ROOT=<chimera checkout> bash waterbox/run-gate.sh
+bash tests/run-frontend.sh --chimera-root <chimera checkout>
 ```
 
 Run the test script before every commit that touches what it covers, and

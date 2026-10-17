@@ -29,8 +29,9 @@ New, and not published yet.
 - RAM Watch and RAM Search read the Java heap (64 MB), where the game's
   objects and its classes' variables are. The collector moves objects now and
   then, so an address found holds its value until the next collection.
-- Not tried yet: DoJa (i-appli) games, for want of one; Chimera's window
-  (only its headless runner so far).
+- In Chimera's window, on Linux and on Windows, the test MIDlet ends in the
+  same machine as in the headless runner; on Linux so does Doom RPG.
+- Not tried yet: DoJa (i-appli) games, for want of one.
 
 ## What you bring
 
