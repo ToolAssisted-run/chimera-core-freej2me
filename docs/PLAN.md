@@ -418,6 +418,31 @@ test MIDlet (0.4 s): the delay it builds up depends on what the game does
 while it runs. No change was needed beyond 371dae77; `j2me:sound-start`
 holds the start of a tune to 10 frames. The game is not in the repository.
 
+## 2026-10-20 - Chinese games (chimera#326)
+
+A Chinese game showed boxes where its text was ("Journey to the West",
+reported with a picture): its text is GBK, which the core could not be
+told, and no font in the core had the characters.
+
+- Text Encoding takes GBK (Simplified Chinese; it reads GB2312 too) and Big5
+  (Traditional). FreeJ2ME-Plus took only ISO_8859_1, Shift_JIS and EUC_KR:
+  started with anything else it asked for a restart in ISO_8859_1, which the
+  core reports as a refusal. Patch 0003 adds the two, and reads the game's
+  text in them when the machine was started with one (no kind of game file
+  asks for a Chinese encoding, so "auto" never picks one).
+- Droid Sans Fallback (Apache 2.0, Debian's fonts-droid-fallback) is the
+  font for a character neither DejaVu nor IPAex Gothic has, after IPAex
+  Gothic: Japanese text draws as before, and the simplified characters
+  Japanese does not use are found.
+- The test MIDlet draws four characters from GBK bytes. With GBK they are
+  Chinese, drawn with the new font; with the default, the Latin-1 letters
+  they always were (gate test j2me:chinese, broken on purpose once: with the
+  Chinese font left out of the font table the line came out different, as
+  IPAex Gothic has the first two characters and not the last two, and the
+  test failed). Big5 starts the MIDlet (j2me:big5).
+- Not tried: the reporter's game, which is not here. Measured on the test
+  MIDlet only.
+
 ## Not done
 
 - **Games** were run to their menus and a little further (above); none

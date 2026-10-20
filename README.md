@@ -25,7 +25,10 @@ Core Manager lists it.
 - Windows: the test MIDlet's project gives the same pictures in Chimera's
   Windows headless runner as on Linux, and a state saved on either and
   loaded by another run continues the same.
-- Japanese text draws with IPAex Gothic, a Japanese font in the core.
+- Japanese text draws with IPAex Gothic, a Japanese font in the core, and
+  Chinese text with Droid Sans Fallback. A Chinese game needs Text Encoding
+  GBK (Simplified) or Big5 (Traditional): nothing in its files says it is
+  Chinese.
 - Export Save Data gives the game's record stores as a zip, and a project
   can start from one.
 - RAM Watch and RAM Search read the Java heap (64 MB), where the game's

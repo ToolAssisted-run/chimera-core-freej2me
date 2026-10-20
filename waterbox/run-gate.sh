@@ -192,6 +192,27 @@ PY
 check "j2me:japanese" "the MIDlet's Japanese line is drawn with the Japanese font: its pixels are the ones IPAex Gothic draws ($jp)" \
 	[ "$jp" = 45e873e52c9738ffd85979366fa28a30ef088ea0 ]
 
+# the MIDlet's Chinese line (chimera#326): four characters in GBK bytes,
+# read with the machine's text encoding. With Text Encoding GBK they are
+# Chinese characters, drawn with Droid Sans Fallback; with the default they
+# are four pairs of Latin-1 letters. Big5 (Traditional Chinese) starts.
+zh_pixels() { python3 - "$1" <<'PY' 2>/dev/null
+import sys, hashlib
+d = open(sys.argv[1], "rb").read(); nl = d.index(b"\n"); w = int(d[:nl].split()[0]); px = d[nl + 1:]
+print(hashlib.sha1(b"".join(px[(y * w) * 4:(y * w + 110) * 4] for y in range(92, 112))).hexdigest())
+PY
+}
+folder gbk '{"textEncoding":"GBK"}' "$midlet"
+box gbk gbk --frames 90 --report 90 --vid-out "$work/gbk90.raw"
+zh="$(zh_pixels "$work/gbk90.raw")"
+zh_default="$(zh_pixels "$work/jp90.raw")"
+check "j2me:chinese" "Text Encoding GBK reads the MIDlet's GBK bytes as Chinese characters, drawn with the Chinese font ($zh); with the default they are Latin-1 letters ($zh_default)" \
+	cond '[ "$zh" = e6a0fb7746082d81f53b38cadd380d4731be6153 ] && [ "$zh_default" = b1e4a7c210e8830510395e77978aeea26bfa456f ]'
+folder big5 '{"textEncoding":"Big5"}' "$midlet"
+box big5 big5 --frames 30 --report 30
+check "j2me:big5" "Text Encoding Big5 starts the MIDlet (FreeJ2ME took only three encodings before)" \
+	cond '[ "$(lines "$work/big5.out")" -ge 1 ] && ! grep -q "^loadError" "$work/big5.out"'
+
 # ------------------------------------------------- settings, lag and the soundfont (chimera#301)
 # A frame is lag when the game gave the screen no new picture in it. The
 # MIDlet draws, then sleeps 33 ms: about 30 pictures a second, fewer under a

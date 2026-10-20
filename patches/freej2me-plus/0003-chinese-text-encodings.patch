@@ -1,0 +1,31 @@
+diff --git a/src/org/recompile/mobile/Mobile.java b/src/org/recompile/mobile/Mobile.java
+index eb9607db..50791315 100644
+--- a/src/org/recompile/mobile/Mobile.java
++++ b/src/org/recompile/mobile/Mobile.java
+@@ -55,7 +55,8 @@ public class Mobile
+ 	private static BufferedWriter logWriter;
+ 	private static final Queue<Runnable> pendingLogs = new LinkedList<Runnable>();
+ 
+-	public static final String[] supportedEncodings = new String[] {"ISO_8859_1", "Shift_JIS", "EUC_KR"};
++	// GBK and Big5 (chimera, issue 326): Chinese games, Simplified and Traditional, whose text is in them
++	public static final String[] supportedEncodings = new String[] {"ISO_8859_1", "Shift_JIS", "EUC_KR", "GBK", "Big5"};
+ 	public static final byte ISO_8859_1 = 0;
+ 	public static final byte SHIFT_JIS  = 1;
+ 	public static final byte EUC_KR     = 2;
+diff --git a/src/org/recompile/mobile/MobilePlatform.java b/src/org/recompile/mobile/MobilePlatform.java
+index f5a1ea8d..1478e117 100644
+--- a/src/org/recompile/mobile/MobilePlatform.java
++++ b/src/org/recompile/mobile/MobilePlatform.java
+@@ -102,6 +102,12 @@ public class MobilePlatform
+ 			Mobile.textEncoding = Mobile.supportedEncodings[Mobile.ISO_8859_1];
+ 			checkFileEncoding();
+ 		}
++		// A Chinese encoding is only ever asked for by whoever started the machine: no
++		// kind of game file asks for one, so the game's text is read with it (chimera, issue 326)
++		else if(System.getProperty("file.encoding").equals("GBK") || System.getProperty("file.encoding").equals("Big5"))
++		{
++			Mobile.textEncoding = System.getProperty("file.encoding");
++		}
+ 
+ 		resizeLCD(width, height);
+ 

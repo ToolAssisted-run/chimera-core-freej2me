@@ -26,6 +26,10 @@ that runs in Chimera on Linux and on Windows.
   `ipaexg.ttf`). `JP_FONT_DIR` names its folder when it is not
   `/usr/share/fonts/opentype/ipaexfont-gothic` (the package unpacked with
   `dpkg-deb -x` will do); checked against `waterbox/fonts-ja.sha256`.
+- Droid Sans Fallback, the Chinese font (Debian's fonts-droid-fallback,
+  `DroidSansFallbackFull.ttf`). `CN_FONT_DIR` names its folder when it is
+  not `/usr/share/fonts/truetype/droid`; checked against
+  `waterbox/fonts-zh.sha256`.
 - The kernel's headers (Debian's linux-libc-dev; `KERNEL_INCLUDE` when they
   are not under `/usr/include`).
 - A checkout of Chimera with miniBox built, with its C++ guest toolchain

@@ -17,7 +17,10 @@
 # fonts.sha256 names, as the picture depends on them. JP_FONT_DIR is where
 # IPAex Gothic is, the Japanese font (default
 # /usr/share/fonts/opentype/ipaexfont-gothic, Debian's
-# fonts-ipaexfont-gothic), checked against fonts-ja.sha256.
+# fonts-ipaexfont-gothic), checked against fonts-ja.sha256. CN_FONT_DIR is
+# where Droid Sans Fallback is, the Chinese font (default
+# /usr/share/fonts/truetype/droid, Debian's fonts-droid-fallback), checked
+# against fonts-zh.sha256.
 set -eu
 here="$(cd "$(dirname "$0")" && pwd)"
 root="$(cd "$here/.." && pwd)"
@@ -26,6 +29,7 @@ out="$root/build/java"
 rt="$root/build/rt"
 fonts="${FONT_DIR:-/usr/share/fonts/truetype/dejavu}"
 jpfonts="${JP_FONT_DIR:-/usr/share/fonts/opentype/ipaexfont-gothic}"
+cnfonts="${CN_FONT_DIR:-/usr/share/fonts/truetype/droid}"
 javac="${BOOT_JDK:+$BOOT_JDK/bin/}javac"
 [ -x "$jdk/bin/jlink" ] || { echo "build/jdk is not built: run waterbox/build-jdk.sh" >&2; exit 1; }
 # every jar the same from the same sources
@@ -73,6 +77,11 @@ awk '{print $2}' "$here/fonts.sha256" | while read -r f; do cp "$fonts/$f" "$rt/
 	exit 1
 }
 cp "$jpfonts/ipaexg.ttf" "$rt/lib/fonts/ipaexg.ttf"
+(cd "$cnfonts" && sha256sum -c --quiet "$here/fonts-zh.sha256") || {
+	echo "Droid Sans Fallback in $cnfonts is not the file fonts-zh.sha256 names (set CN_FONT_DIR)" >&2
+	exit 1
+}
+cp "$cnfonts/DroidSansFallbackFull.ttf" "$rt/lib/fonts/DroidSansFallbackFull.ttf"
 python3 "$here/make-fontconfig.py" "$rt/lib/fontconfig.properties"
 
 # Gervill, the JDK's synthesizer, makes a sound bank the first time it is

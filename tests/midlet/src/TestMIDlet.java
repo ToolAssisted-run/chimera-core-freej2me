@@ -11,11 +11,15 @@ import javax.microedition.rms.RecordStore;
 /* The test MIDlet of the FreeJ2ME core: a square moved by the keys, a timer
  * ticking every 50 ms, text, a score saved to a record store every 30
  * frames, a touch that leaves a mark, Japanese text (the core's fallback
- * font), and sound - a MIDI tune that loops,
+ * font), Chinese text read in the machine's encoding, and sound - a MIDI tune that loops,
  * a tone on Fire and a beep (a WAV made here) on 5. Everything it draws and
  * plays depends on the keys and the machine's clock, nothing on the host.
  * SPDX-License-Identifier: MIT */
 public class TestMIDlet extends MIDlet {
+    /* the four characters of "Chinese test", in GBK, read with the machine's text
+     * encoding: Chinese characters when it is GBK, other ones when it is not */
+    static final byte[] CHINESE = { (byte) 0xd6, (byte) 0xd0, (byte) 0xce, (byte) 0xc4, (byte) 0xb2, (byte) 0xe2, (byte) 0xca, (byte) 0xd4 };
+
     private Game game;
 
     protected void startApp() {
@@ -128,6 +132,7 @@ public class TestMIDlet extends MIDlet {
                 g.drawString(audio, 2, 38, Graphics.TOP | Graphics.LEFT);
                 g.drawString("\u65e5\u672c\u8a9e \u30c6\u30b9\u30c8", 2, 56, Graphics.TOP | Graphics.LEFT);
                 g.drawString(loaded < 0 ? "nothing loaded" : "loaded " + loaded, 2, 74, Graphics.TOP | Graphics.LEFT);
+                g.drawString(new String(CHINESE), 2, 92, Graphics.TOP | Graphics.LEFT);
                 for (int i = 0; i < 64; i++)
                     if (trail[i] != 0) g.drawRect(trail[i] / 1000, trail[i] % 1000, 3, 3);
                 if (tx >= 0) { g.setColor(0x40ff40); g.fillArc(tx - 5, ty - 5, 10, 10, 0, 360); }

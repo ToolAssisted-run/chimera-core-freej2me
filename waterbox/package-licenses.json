@@ -191,6 +191,14 @@
    "license": "IPA-1.0 (IPA Font License Agreement v1.0)",
    "url": "https://moji.or.jp/ipafont/",
    "file": "waterbox/fonts-license/IPAexGothic.txt"
+  },
+  {
+   "name": "Droid Sans Fallback font",
+   "license": "Apache-2.0",
+   "url": "https://android.googlesource.com/platform/frameworks/base/",
+   "version": "6.0.1r16 (Debian fonts-droid-fallback 1:6.0.1r16-1.1build1)",
+   "file": "waterbox/fonts-license/DroidSansFallback.txt",
+   "sourceUrl": "http://archive.ubuntu.com/ubuntu/pool/main/f/fonts-android/fonts-android_6.0.1r16.orig.tar.xz"
   }
  ]
 }

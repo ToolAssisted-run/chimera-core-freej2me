@@ -4,7 +4,9 @@
 Serif, Monospaced and DialogInput, each in four styles, from the DejaVu
 files in the runtime's lib/fonts ($JRE_LIB_FONTS). A character DejaVu does
 not have - Japanese kana and kanji - is taken from IPAex Gothic (the
-fallback); the measurements of a font stay DejaVu's.
+fallback), and one IPAex Gothic does not have either - the Chinese
+characters Japanese does not use, Simplified and Traditional - from Droid
+Sans Fallback (chimera#326); the measurements of a font stay DejaVu's.
 
   make-fontconfig.py <out>
 SPDX-License-Identifier: MIT"""
@@ -28,9 +30,11 @@ for name, base in logical.items():
         s = suffix.replace("Oblique", "Italic") if base == "DejaVu Serif" else suffix
         lines.append("%s.%s.latin-1=%s%s" % (name, st, base, s))
         lines.append("%s.%s.japanese-x0208=IPAexGothic" % (name, st))
+        lines.append("%s.%s.chinese-gb18030=DroidSansFallbackFull" % (name, st))
 lines.append("sequence.allfonts=latin-1")
-lines.append("sequence.fallback=japanese-x0208")
+lines.append("sequence.fallback=japanese-x0208,chinese-gb18030")
 faces["IPAexGothic"] = "ipaexg"
+faces["DroidSansFallbackFull"] = "DroidSansFallbackFull"
 for face, f in faces.items():
     lines.append("filename.%s=$JRE_LIB_FONTS/%s.ttf" % (face.replace(" ", "_"), f))
 with open(out, "w") as o:
