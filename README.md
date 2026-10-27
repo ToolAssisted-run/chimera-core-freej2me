@@ -5,7 +5,7 @@ frontend for tool-assisted speedruns, for **J2ME games**: the Java games of
 2000s mobile phones. It runs
 [FreeJ2ME-Plus](https://github.com/TASEmulators/freej2me-plus) on a Java VM
 (OpenJDK 21) built into the core, and produces one file,
-`freej2me.chimeraCore`, that goes in Chimera's `Cores` folder.
+`freej2me.chimeraCore`, that goes in Chimera's `cores` folder.
 
 ## Status
 
