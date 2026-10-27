@@ -1,25 +1,18 @@
 #!/usr/bin/env python3
-"""Writes a copy of a Chimera configuration with this core's settings in it.
-
-  settings-config.py <configuration> <output> <settings as JSON> [<firmware as JSON>]
-
-The settings are stored the way Chimera's settings window stores them: a map
-of name to value under the adapter's type name. The firmware is a map of a
-firmware id to a file, stored the way the Firmware
-window stores it, under this core's name. The core is also made the one
-Chimera picks for J2ME, because the Cores folder may hold
-another.
-"""
+# Writes a copy of a Chimera config for a frontend run, with the given firmware
+# remembered the way the Firmware window remembers it (keyed under this core's
+# name). The run's sync settings are its project's, not the config's: a game
+# runs only in a project (Chimera, 2026-10-26), and run-frontend.sh makes one
+# with them. The settings argument stays for the callers' sake.
+#
+# Usage: settings-config.py <source config> <output config> <settings JSON> [<firmware JSON>]
+# The optional firmware map is {"<decl id>": "<file path>"}.
 import json
 import sys
 
 cfg = json.load(open(sys.argv[1]))
-cfg.setdefault("CoreSettings", {})["Chimera.Emulation.Common.Waterbox.WaterboxCore"] = {
-    "Values": json.loads(sys.argv[3])
-}
-firmware = cfg.setdefault("CoreFirmware", {})
-for firmware_id, path in json.loads(sys.argv[4] if len(sys.argv) > 4 else "{}").items():
-    firmware["FreeJ2ME-Plus/" + firmware_id] = path
-for system in ("J2ME",):
-    cfg.setdefault("DefaultCores", {})[system] = "FreeJ2ME-Plus"
+if len(sys.argv) > 4:
+    fw = cfg.setdefault("CoreFirmware", {})
+    for decl_id, path in json.loads(sys.argv[4]).items():
+        fw["FreeJ2ME-Plus/" + decl_id] = path
 json.dump(cfg, open(sys.argv[2], "w"), indent=2)
