@@ -132,7 +132,7 @@ i = cfg["input"]
 sys.exit(0 if i["buttons"] == buttons and len(buttons) == 21 and [a["name"] for a in i["axes"]] == ["Touch X", "Touch Y"] and len(axes) == 2 else 1)
 PY
 
-if [ -n "$chimera_root" ] && [ -f "$chimera_root/source/gui/Chimera.Input/KeyMouseInput/DistinctKey.cs" ]; then
+if [ -n "$chimera_root" ] && [ -f "$chimera_root/source/ui/qt/key_codes.inc" ]; then
 	check "package:key-names" "every host key the package's default bindings name is a key Chimera knows: $(python3 "$root/tests/check-key-names.py" "$chimera_root" "$here/default_keybinds.json" 2>&1)" \
 		sh -c "python3 '$root/tests/check-key-names.py' '$chimera_root' '$here/default_keybinds.json' > /dev/null 2>&1"
 else

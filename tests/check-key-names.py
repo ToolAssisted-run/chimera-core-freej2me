@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Checks that every key the package's default bindings name is a key
 Chimera knows, so that none ships unbound by a misspelling. Chimera's names
-are read from its source: the keyboard's (source/gui/Chimera.Input/
-KeyMouseInput/DistinctKey.cs, with the names DistinctKeyNameOverrides.cs
-gives some of them, and Shift, Ctrl and Alt for both keys of each, as
-Chimera merges them by default: a panel that binds LeftShift or RightShift
-must bind Shift too) and the mouse's. A gamepad's buttons are not checked.
+are read from its source: the keyboard's from the window's key tables
+(source/ui/qt/key_codes.inc, every system's), Shift, Ctrl and Alt for both
+keys of each, as Chimera merges them by default (a panel that binds
+LeftShift or RightShift must bind Shift too), and the mouse's. A gamepad's
+buttons are not checked.
 
 usage: check-key-names.py <chimera checkout> <default_keybinds.json>"""
 import json
@@ -13,28 +13,14 @@ import re
 import sys
 
 chimera, binds = sys.argv[1], sys.argv[2]
-gui = chimera + "/source/gui"
-enum = open(gui + "/Chimera.Input/KeyMouseInput/DistinctKey.cs").read()
-enum = re.sub(r"///.*", "", enum)
-body = enum[enum.index("enum DistinctKey"):]
-body = body[body.index("{") + 1:body.index("}")]
-# a member written "PageUp = Prior" is another name of the same key
-alias = {}
-for m in (m.strip() for m in body.split(",")):
-    if m:
-        name, _, of = (x.strip() for x in m.partition("="))
-        alias[name] = alias.get(of, of) if of else name
-over = open(gui + "/Chimera.Client.Common/input/DistinctKeyNameOverrides.cs").read()
-renamed = dict(re.findall(r"DistinctKey\.(\w+)\s*=>\s*\"([^\"]+)\"", over))
-# a key Chimera renames is known by that name alone, whichever of its names
-# the rename is written with; another key by any of its names
-renamed_keys = {alias[m]: n for m, n in renamed.items() if m in alias}
-known = {renamed_keys.get(k, m) for m, k in alias.items()}
-# Chimera merges the left and right modifier keys unless told not to
-# (Config.MergeLAndRModifierKeys, true by default; Input.ModifierKeyPreMap):
-# a press of either Shift arrives as "Shift". LeftShift and RightShift fire
-# only with the merging off, so a panel that binds them must also bind the
-# merged key, or Shift does nothing on a default setup.
+tables = open(chimera + "/source/ui/qt/key_codes.inc").read()
+known = set(re.findall(r'\{\s*0x[0-9A-Fa-f]+\s*,\s*"([^"]+)"\s*\}', tables))
+if not known:
+    sys.exit("no key names found in " + chimera + "/source/ui/qt/key_codes.inc")
+# Chimera merges the left and right modifier keys unless told not to (on by
+# default): a press of either Shift arrives as "Shift". LeftShift and
+# RightShift fire only with the merging off, so a panel that binds them must
+# also bind the merged key, or Shift does nothing on a default setup.
 merged = {"LeftShift": "Shift", "RightShift": "Shift", "LeftCtrl": "Ctrl", "RightCtrl": "Ctrl",
           "LeftAlt": "Alt", "RightAlt": "Alt"}
 known |= set(merged.values())
