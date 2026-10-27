@@ -114,8 +114,8 @@ the package too (Chimera's `AGENTS.md`).
 bash tests/run-frontend.sh --chimera-root <chimera checkout>
 ```
 
-Runs the package in Chimera's own window (Chimera.exe under Mono, on an Xvfb
-display of its own; needs mono and Xvfb, and Chimera's interface built):
+Runs the package in Chimera's own window, run headless (it needs no display;
+Chimera must be built with its window, `<chimera>/tools/ci-chimera.sh`):
 the test MIDlet's Java heap after 300 frames against the headless
 runner's, the key bindings Chimera adopts from the package, and Doom RPG
 where `tests/games-local` has it. About a minute.

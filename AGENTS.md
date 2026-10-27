@@ -38,7 +38,7 @@ design log, with what was decided, why, and what was measured.
   `package-licenses.json` - what the package declares.
 - `waterbox/run-wbx.c`, `run-native.c`, `gate-harness.h` - the runners.
 - `tests/run-frontend.sh` - the window test, with `frontend-run.lua`,
-  `exit.lua`, `settings-config.py`, `forget-controller.py` and
+  `dump-controls.lua`, `settings-config.py` and
   `check-keybinds.py`.
 - `tests/midlet/` - the test MIDlet; `tests/make-project.py` writes a
   project, `tests/check-key-names.py` checks the default bindings,

@@ -248,7 +248,8 @@ The test script: 30 passed, 0 failed, 0 skipped (games and CHIMERA_ROOT).
 ## 2026-10-17 - in Chimera's window
 
 `tests/run-frontend.sh` (from chimera-core-tic80) runs the package in
-Chimera's window under Mono on an Xvfb display of its own, through a Lua
+Chimera's window (then the C# window under Mono on Xvfb; now the Qt window
+run headless), through a Lua
 script: the test MIDlet project, 300 frames with Right, Fire and Num 5
 pressed, leaves a Java heap whose SHA-256 is the headless runner's
 (`window:midlet`); the key bindings the package ships are the ones Chimera
