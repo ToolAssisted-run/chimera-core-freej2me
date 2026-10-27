@@ -75,25 +75,18 @@ jobs:
         # those libraries. The DejaVu fonts go into the core.
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends meson ninja-build build-essential cmake pkg-config python3 curl xz-utils patch mono-complete xvfb libgl1-mesa-dev libegl-dev \
+          sudo apt-get install -y --no-install-recommends meson ninja-build build-essential cmake pkg-config python3 curl xz-utils patch libgl1-mesa-dev libegl-dev \
             libx11-dev libxext-dev libxrender-dev libxrandr-dev libxtst-dev libxt-dev libasound2-dev libcups2-dev libfontconfig-dev \
             zip unzip autoconf automake libtool libltdl-dev openjdk-21-jdk-headless fonts-dejavu-core fonts-dejavu-extra fonts-ipaexfont-gothic fonts-droid-fallback linux-libc-dev
 
-      - name: Set up .NET
-        uses: actions/setup-dotnet@v4
+      - name: Cache Qt
+        uses: actions/cache@v4
         with:
-          dotnet-version: '8.0'
+          path: ~/qt
+          key: qt-6.12.0-linux-aqt-3.3.0
 
-      - name: Build Chimera's engine
-        working-directory: chimera-checkout
-        run: |
-          meson setup build/meson-linux --prefix "$PWD/build" --libdir dll
-          meson compile -C build/meson-linux
-          meson install -C build/meson-linux
-
-      - name: Build Chimera's interface
-        working-directory: chimera-checkout
-        run: dotnet build source/gui/Chimera.sln -c Release /nodeReuse:false -p:UseSharedCompilation=false
+      - name: Build Chimera (the engine, chimera-run and the window)
+        run: chimera-checkout/tools/ci-chimera.sh "$HOME/qt"
 
       - name: Cache miniBox's sandbox toolchain
         uses: actions/cache@v4
@@ -155,8 +148,8 @@ jobs:
           done
 
       - name: Run the window test
-        # The package loaded by Chimera's own window (under Mono, on a
-        # virtual display): the test MIDlet's Java heap against the headless
+        # The package loaded by Chimera's own window (run headless): the test
+        # MIDlet's Java heap against the headless
         # runner's, and the keys. Doom RPG skips: no game is on a runner.
         run: |
           rc=0
@@ -167,14 +160,10 @@ jobs:
             grep -q "^$t  *PASS " window.out || { echo "$t did not pass"; exit 1; }
           done
 
-      - name: Chimera's checks of the package
-        working-directory: chimera-checkout
+      - name: Package contract tests
         env:
           CHIMERA_CORES_DIR: ${{ github.workspace }}/chimera-checkout/build/Cores
-        run: |
-          dotnet test source/gui/Chimera.Tests.Client.Common/Chimera.Tests.Client.Common.csproj \
-            -c Release --nologo \
-            --filter "FullyQualifiedName~InstalledCorePackagesTests|FullyQualifiedName~MnemonicUniquenessTests"
+        run: chimera-checkout/build/meson-linux/source/ui/test-packages
 
       - name: Upload the package
         uses: actions/upload-artifact@v7
