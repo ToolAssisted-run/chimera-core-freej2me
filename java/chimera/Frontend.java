@@ -37,6 +37,9 @@ public final class Frontend
 	public static final short[] audio = new short[2 * AUDIO_FRAMES];
 	/* why start() failed */
 	public static String error = "";
+	/* A text a person reads is a key of the core's languages/en.json, each of
+	   its arguments after a TEXT_ARG (chimera docs/translations.md). */
+	static final String TEXT_ARG = "\u001f";
 	/* whether the game gave the screen a new picture in the last frame: a
 	   frame without one is a lag frame (chimera#301) */
 	public static boolean newPicture;
@@ -75,13 +78,12 @@ public final class Frontend
 
 		if (!Mobile.getPlatform().load(new File(game).toURI().toString()))
 		{
-			error = "FreeJ2ME could not load " + game;
+			error = "error.could_not_load" + TEXT_ARG + game;
 			return false;
 		}
 		if (Mobile.libretroRestartRequested != 0)
 		{
-			error = "the game asks for the text encoding " + Mobile.textEncoding + " and the machine was started with "
-				+ System.getProperty("file.encoding");
+			error = "error.text_encoding" + TEXT_ARG + Mobile.textEncoding + TEXT_ARG + System.getProperty("file.encoding");
 			return false;
 		}
 		for (String s : settings)
@@ -103,7 +105,7 @@ public final class Frontend
 		// load; a project that asked for one is told instead (chimera#301)
 		if (Mobile.useCustomMidi && Manager.getCustomSoundfont() == null)
 		{
-			error = "the soundfont (soundfont.sf2) could not be read as a SoundFont 2 file";
+			error = "error.soundfont_unreadable";
 			return false;
 		}
 		Mobile.getPlatform().runJar();
@@ -166,7 +168,7 @@ public final class Frontend
 		final String dir = "rms/" + suite + "/";
 		if (!file.toLowerCase().endsWith(".zip"))
 		{
-			error = "the save data must be the .zip Export Save Data writes, not " + file;
+			error = "error.save_not_zip" + TEXT_ARG + file;
 			return false;
 		}
 		try
@@ -181,12 +183,12 @@ public final class Frontend
 					final String name = e.getName();
 					if (!name.startsWith("rms/") || name.contains("..") || name.contains("\\"))
 					{
-						error = "the save data holds " + name + ", which is not FreeJ2ME's (rms/<game>/...)";
+						error = "error.save_not_freej2me" + TEXT_ARG + name;
 						return false;
 					}
 					if (!name.startsWith(dir) || name.length() == dir.length() || name.indexOf('/', dir.length()) >= 0)
 					{
-						error = "the save data is another game's: " + name + " (this game's is under " + dir + ")";
+						error = "error.save_other_game" + TEXT_ARG + name + TEXT_ARG + dir;
 						return false;
 					}
 					copy(z, new File(name));
@@ -196,14 +198,14 @@ public final class Frontend
 			finally { z.close(); }
 			if (files == 0)
 			{
-				error = "the save data holds nothing";
+				error = "error.save_empty";
 				return false;
 			}
 			return true;
 		}
 		catch (IOException e)
 		{
-			error = "the save data could not be read: " + e;
+			error = "error.save_unreadable" + TEXT_ARG + e;
 			return false;
 		}
 	}

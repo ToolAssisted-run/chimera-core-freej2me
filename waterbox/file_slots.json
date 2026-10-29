@@ -3,7 +3,7 @@
  "slots": [
   {
    "id": "game",
-   "title": "Game",
+   "title": "slot.game",
    "min": 1,
    "max": 4,
    "formats": [
@@ -13,19 +13,19 @@
     "jam",
     "msd"
    ],
-   "help": "The game: its .jar, and the descriptor that came with it if there is one (.jad, or .jam for DoJa, .msd for SKT games), which FreeJ2ME reads for the game's properties. A KDDI game is one .kjx file. The files are never changed."
+   "help": "slot.game.help"
   },
   {
    "id": "savedata",
-   "title": "Save data",
+   "title": "slot.savedata",
    "min": 0,
    "max": 1,
    "formats": [
     "zip"
    ],
-   "help": "What the game had saved (its record stores) at the start, for a project that begins from a saved game: the .zip Emulator > Export Save Data... writes. The file is never changed. Save data of another game is refused. Leave this empty to start with nothing saved.",
+   "help": "slot.savedata.help",
    "namePattern": "\\.zip$",
-   "nameHelp": "save data is identified by its extension, .zip."
+   "nameHelp": "slot.savedata.name_help"
   }
  ]
 }

@@ -40,6 +40,11 @@ extern const unsigned char chimera_pack[], chimera_pack_end[];
 #error CORE_HOME: where the Java runtime is
 #endif
 
+/* A text a person reads is a key of languages/en.json, each of its
+ * arguments after a TEXT_ARG (chimera docs/translations.md). TEXT_ARG is a
+ * string of its own so the byte after it is never read as more of its hex. */
+#define TEXT_ARG "\x1f"
+
 static char g_loadError[1024];
 
 /* ---- the controls -------------------------------------------------------
@@ -117,7 +122,7 @@ ECL_EXPORT int Init(void)
 	g_loadError[0] = '\0';
 #ifdef CHIMERA_GUEST
 	if (!memfs_mount_image(chimera_pack, (size_t)(chimera_pack_end - chimera_pack))) {
-		snprintf(g_loadError, sizeof g_loadError, "the core's own files are damaged");
+		snprintf(g_loadError, sizeof g_loadError, "error.core_files_damaged");
 		return 0;
 	}
 	/* the settings and the slot map, where the readers below look for them */
@@ -154,7 +159,7 @@ ECL_EXPORT int Init(void)
 				|| (pass == 2 && ends_with(names[i], ".jad")))
 				game = names[i];
 	if (!game) {
-		snprintf(g_loadError, sizeof g_loadError, count ? "the game slot holds no .jar, .jad or .kjx file" : "no game was given");
+		snprintf(g_loadError, sizeof g_loadError, count ? "error.no_game_file" : "error.no_game");
 		return 0;
 	}
 #ifdef CHIMERA_GUEST
@@ -162,7 +167,7 @@ ECL_EXPORT int Init(void)
 		char at[300];
 		snprintf(at, sizeof at, "/%.256s", names[i]);
 		if (!memfs_import(names[i], at)) {
-			snprintf(g_loadError, sizeof g_loadError, "the file %.256s could not be read", names[i]);
+			snprintf(g_loadError, sizeof g_loadError, "error.file_unreadable" TEXT_ARG "%.256s", names[i]);
 			return 0;
 		}
 	}
@@ -178,7 +183,7 @@ ECL_EXPORT int Init(void)
 		char at[300];
 		snprintf(at, sizeof at, "/%.256s", savedata);
 		if (!memfs_import(savedata, at)) {
-			snprintf(g_loadError, sizeof g_loadError, "the save data %.256s could not be read", savedata);
+			snprintf(g_loadError, sizeof g_loadError, "error.save_data_unreadable" TEXT_ARG "%.256s", savedata);
 			return 0;
 		}
 #endif
@@ -199,7 +204,7 @@ ECL_EXPORT int Init(void)
 	if (strcmp(fps, "off")) {
 		const int n = atoi(fps);
 		if (n < 2 || n > 80) {
-			snprintf(g_loadError, sizeof g_loadError, "the frame limit %s is not one this core has: 2 to 80, or off", fps);
+			snprintf(g_loadError, sizeof g_loadError, "error.frame_limit" TEXT_ARG "%s", fps);
 			return 0;
 		}
 	}
@@ -214,13 +219,13 @@ ECL_EXPORT int Init(void)
 #else
 		if (!copy_file("soundfont.sf2", "freej2me_system/customMIDI/soundfont.sf2")) {
 #endif
-			snprintf(g_loadError, sizeof g_loadError, "'Use custom MIDI soundfont' is on and the soundfont (soundfont.sf2) is not there");
+			snprintf(g_loadError, sizeof g_loadError, "error.soundfont_missing");
 			return 0;
 		}
 	}
 	int width = 240, height = 320;
 	if (sscanf(size, "%dx%d", &width, &height) != 2 || width < 16 || height < 16 || width * height > MAX_PIXELS) {
-		snprintf(g_loadError, sizeof g_loadError, "the screen size %s is not one this core has", size);
+		snprintf(g_loadError, sizeof g_loadError, "error.screen_size" TEXT_ARG "%s", size);
 		return 0;
 	}
 	if (!strcmp(encoding, "auto")) {

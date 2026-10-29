@@ -312,7 +312,7 @@ folder og '{}' "$midlet"
 cp "$work/other.zip" "$work/og/"
 printf '{"game":["%s"],"savedata":["other.zip"]}' "$(basename "$midlet")" > "$work/og/slots"
 box og og --frames 1
-check "save:refused" "save data of another game is refused, and says so" grep -q "Init failed.*another game" "$work/og.out" "$work/og.err"
+check "save:refused" "save data of another game is refused, and says so" grep -q "Init failed.*error.save_other_game" "$work/og.out" "$work/og.err"
 
 # RAM Search's way: the square's x is 100 before Right is held and the same
 # number after it is let go; exactly one place in the heap is
@@ -408,18 +408,18 @@ fi
 # ------------------------------------------------- refusals
 folder none '{}'
 box none none --frames 1
-check "refused:no-game" "a machine with no game is refused, and says so" grep -q "Init failed.*no game was given" "$work/none.out" "$work/none.err"
+check "refused:no-game" "a machine with no game is refused, and says so" grep -q "Init failed.*error.no_game$" "$work/none.out" "$work/none.err"
 
 folder nosf '{"customSoundfont":true}' "$midlet"
 box nosf nosf --frames 1
-check "refused:no-soundfont" "Use custom MIDI soundfont with no soundfont is refused, and says so" grep -q "Init failed.*soundfont.*is not there" "$work/nosf.out" "$work/nosf.err"
+check "refused:no-soundfont" "Use custom MIDI soundfont with no soundfont is refused, and says so" grep -q "Init failed.*error.soundfont_missing" "$work/nosf.out" "$work/nosf.err"
 folder badsf '{"customSoundfont":true}' "$midlet"
 head -c 4096 /dev/zero > "$work/badsf/soundfont.sf2"
 box badsf badsf --frames 1
-check "refused:bad-soundfont" "a soundfont that is not a SoundFont 2 file is refused, and says so" grep -q "Init failed.*could not be read as a SoundFont 2 file" "$work/badsf.out" "$work/badsf.err"
+check "refused:bad-soundfont" "a soundfont that is not a SoundFont 2 file is refused, and says so" grep -q "Init failed.*error.soundfont_unreadable" "$work/badsf.out" "$work/badsf.err"
 folder fps1 '{"fpsLimit":"1"}' "$midlet"
 box fps1 fps1 --frames 1
-check "refused:frame-limit" "a frame limit outside 2 to 80 is refused, and says so" grep -q "Init failed.*frame limit 1 is not one" "$work/fps1.out" "$work/fps1.err"
+check "refused:frame-limit" "a frame limit outside 2 to 80 is refused, and says so" grep -q "Init failed.*error.frame_limit.1" "$work/fps1.out" "$work/fps1.err"
 
 # ------------------------------------------------- the native runner
 if [ -x "$native" ]; then

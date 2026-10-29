@@ -21,6 +21,11 @@
 
 #include "driver.h"
 
+/* A text a person reads is a key of languages/en.json, each of its
+ * arguments after a TEXT_ARG (chimera docs/translations.md). TEXT_ARG is a
+ * string of its own so the byte after it is never read as more of its hex. */
+#define TEXT_ARG "\x1f"
+
 enum { REQ_NONE, REQ_START, REQ_FRAME };
 
 static pthread_mutex_t g_mu = PTHREAD_MUTEX_INITIALIZER;
@@ -66,7 +71,7 @@ void driver_set_video_buffer(uint32_t *buf, int pixels)
 const char *driver_error(void) { return g_error; }
 
 /* the exception's text, into g_error, and the exception cleared */
-static void describe_exception(const char *what)
+static void describe_exception(const char *what, const char *what_because)
 {
 	JNIEnv *env = g_env;
 	jthrowable t = (*env)->ExceptionOccurred(env);
@@ -80,7 +85,7 @@ static void describe_exception(const char *what)
 	jstring s = ts ? (jstring)(*env)->CallObjectMethod(env, t, ts) : NULL;
 	if (s) {
 		const char *u = (*env)->GetStringUTFChars(env, s, NULL);
-		snprintf(g_error, sizeof g_error, "%s: %s", what, u);
+		snprintf(g_error, sizeof g_error, "%s" TEXT_ARG "%s", what_because, u);
 		(*env)->ReleaseStringUTFChars(env, s, u);
 	}
 	(*env)->ExceptionClear(env);
@@ -91,7 +96,7 @@ static int find_frontend(void)
 	JNIEnv *env = g_env;
 	jclass c = (*env)->FindClass(env, "chimera/Frontend");
 	if (!c) {
-		describe_exception("the front end (chimera.Frontend) was not found");
+		describe_exception("error.frontend_missing", "error.frontend_missing_because");
 		return 0;
 	}
 	g_frontend = (jclass)(*env)->NewGlobalRef(env, c);
@@ -104,7 +109,7 @@ static int find_frontend(void)
 	g_errorField = (*env)->GetStaticFieldID(env, c, "error", "Ljava/lang/String;");
 	g_newPictureField = (*env)->GetStaticFieldID(env, c, "newPicture", "Z");
 	if (!g_start || !g_frame || !g_lcd || !g_w || !g_h || !g_audioField || !g_errorField || !g_newPictureField) {
-		describe_exception("the front end (chimera.Frontend) is not the one this core was built with");
+		describe_exception("error.frontend_other", "error.frontend_other_because");
 		return 0;
 	}
 	return 1;
@@ -125,13 +130,13 @@ static int do_start(void)
 	(*env)->DeleteLocalRef(env, game);
 	(*env)->DeleteLocalRef(env, settings);
 	if ((*env)->ExceptionCheck(env)) {
-		describe_exception("the game did not start");
+		describe_exception("error.game_did_not_start", "error.game_did_not_start_because");
 		return 0;
 	}
 	if (!ok) {
 		jstring e = (jstring)(*env)->GetStaticObjectField(env, g_frontend, g_errorField);
 		const char *u = e ? (*env)->GetStringUTFChars(env, e, NULL) : NULL;
-		snprintf(g_error, sizeof g_error, "%s", u ? u : "the game did not start");
+		snprintf(g_error, sizeof g_error, "%s", u ? u : "error.game_did_not_start");
 		if (u)
 			(*env)->ReleaseStringUTFChars(env, e, u);
 		return 0;
@@ -166,7 +171,7 @@ static int do_frame(void)
 	JNIEnv *env = g_env;
 	(*env)->CallStaticVoidMethod(env, g_frontend, g_frame, (jint)g_keys, (jboolean)(g_touch != 0), (jint)g_x, (jint)g_y);
 	if ((*env)->ExceptionCheck(env)) {
-		describe_exception("the frame did not finish");
+		describe_exception("error.frame_did_not_finish", "error.frame_did_not_finish_because");
 		return 0;
 	}
 	copy_outputs();
@@ -221,7 +226,7 @@ static void *vm_main(void *arg)
 	args.ignoreUnrecognized = JNI_FALSE;
 	JavaVM *vm;
 	if (JNI_CreateJavaVM(&vm, (void **)&g_env, &args) != JNI_OK) {
-		snprintf(g_error, sizeof g_error, "the Java VM did not start");
+		snprintf(g_error, sizeof g_error, "error.vm_did_not_start");
 		answer(0);
 		return NULL;
 	}
@@ -277,7 +282,7 @@ int driver_start(const char *classpath, const char *game, int width, int height,
 	g_busy = 1;
 	pthread_mutex_unlock(&g_mu);
 	if (pthread_create(&t, &attr, vm_main, NULL) != 0) {
-		snprintf(g_error, sizeof g_error, "the VM's thread could not be made");
+		snprintf(g_error, sizeof g_error, "error.vm_thread");
 		return 0;
 	}
 	pthread_attr_destroy(&attr);
