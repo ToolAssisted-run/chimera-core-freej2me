@@ -178,7 +178,6 @@ def main():
     project = {
         "id": "freej2me-test-%s" % os.path.splitext(files[0]["name"])[0],
         "title": "%s through Chimera" % files[0]["name"],
-        "description": "written by tests/make-project.py",
         "core": {"name": cfg["coreName"], "version": cfg["version"], "sha1": sha1(package)},
         "rerecords": 0,
         "files": files,
@@ -197,8 +196,12 @@ def main():
             "VsyncDenominator": str(cfg["video"]["vsyncDenominator"]),
         },
     }
-    with open(out, "w") as f:
-        json.dump(project, f, indent="\t")
+    # a project is a zip (Chimera's since 2026-11-02): project.json, its
+    # "inputs" the columns only, and the entries, a line each, in input.input
+    entries = project["inputs"].pop("entries", [])
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("project.json", json.dumps(project, indent="\t"))
+        z.writestr("input.input", "".join(e + "\n" for e in entries))
     return 0
 
 

@@ -118,7 +118,7 @@ fi
 # the keys the package ships are the machine's when nobody changed them
 # (the window keeps only the keys a person changed; fresh settings have none)
 mkdir -p "$work/keys"; cp "$work/tm/$(basename "$midlet")" "$work/keys/"
-sed 's/"freej2me-test-[^"]*"/"freej2me-test-keys"/' "$work/tm/tm.chimeraProject" > "$work/keys/keys.chimeraProject"
+python3 -c 'import json, sys, zipfile; z = zipfile.ZipFile(sys.argv[1]); d = json.loads(z.read("project.json")); d["id"] = sys.argv[3]; o = zipfile.ZipFile(sys.argv[2], "w", zipfile.ZIP_DEFLATED); o.writestr("project.json", json.dumps(d, indent="\t")); [o.writestr(n, z.read(n)) for n in z.namelist() if n != "project.json"]; o.close()' "$work/tm/tm.chimeraProject" "$work/keys/keys.chimeraProject" freej2me-test-keys
 printf 'out=%s/keys.controls.json\nmeta=%s/keys.meta.txt\n' "$work" "$work" > "$work/job.keys.txt"
 ( cd "$chimera_root" && MINIHAWK_JOB="$work/job.keys.txt" timeout 900 "$chimera_exe" --headless \
 	"--config=$work/settings.keys.json" "--project=$work/keys/keys.chimeraProject" "--lua=$here/dump-controls.lua" ) > "$work/keys.log" 2>&1
