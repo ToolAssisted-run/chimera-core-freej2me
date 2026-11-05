@@ -29,12 +29,6 @@ on:
   push:
     branches: [ "main" ]
   workflow_dispatch:
-    inputs:
-      kind:
-        description: 'dev (rolling) or nightly (dated). Blank means dev.'
-        required: false
-        default: ''
-        type: string
   schedule:
     # 05:35 UTC. A nightly is published only when main moved since the last
     # one; the shared publishing workflow checks.
@@ -184,12 +178,13 @@ jobs:
             build/jdk/configure-support/config.log
 
   publish:
-    # What passed above, published as this core's own release: a rolling `dev`
-    # on every push to main, a dated `nightly-YYYY-MM-DD` from the scheduled
-    # run, through the one workflow every Chimera core publishes with.
+    # What passed above, published as this core's own release: a dated `nightly-
+    # YYYY-MM-DD` from the scheduled run or one started by hand (a push to main
+    # publishes nothing), through the one workflow every Chimera core publishes
+    # with.
     name: publish
     needs: [ gate ]
-    if: github.event_name != 'pull_request'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: write
     uses: ToolAssisted-run/chimera/.github/workflows/publish-core.yml@main
@@ -197,4 +192,3 @@ jobs:
       core-id: freej2me
       artifact: freej2me-${{ github.sha }}
       package: freej2me.chimeraCore
-      kind: ${{ github.event.inputs.kind }}
