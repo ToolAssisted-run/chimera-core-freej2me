@@ -179,6 +179,23 @@ jobs:
           path: chimera-checkout/build/Cores/freej2me.chimeraCore
           if-no-files-found: error
 
+      - name: On a failure, one sandbox run's own words
+        # the test script keeps only its verdicts; this is what the sandbox
+        # runner itself says on the test MIDlet
+        if: failure()
+        run: |
+          t="$RUNNER_TEMP/one-run"
+          mkdir -p "$t"
+          cp build/tests/midlet/test-midlet.jar "$t/"
+          echo '{"game":["test-midlet.jar"]}' > "$t/slots"
+          echo '{}' > "$t/settings"
+          rc=0
+          (cd "$t" && timeout 300 "$GITHUB_WORKSPACE/build/bin/run-wbx" "$GITHUB_WORKSPACE/build/guest/core.wbx" "$t" --frames 30 --report 10) > one-run.out 2>&1 || rc=$?
+          echo "run-wbx exit: $rc"
+          tail -60 one-run.out
+          for f in "$t/minibox-diag.log" minibox-diag.log; do [ -f "$f" ] && { echo "== $f"; tail -60 "$f"; }; done
+          true
+
       - name: Upload the test output on failure
         if: failure()
         uses: actions/upload-artifact@v7
