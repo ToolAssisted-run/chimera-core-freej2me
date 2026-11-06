@@ -443,6 +443,38 @@ told, and no font in the core had the characters.
 - Not tried: the reporter's game, which is not here. Measured on the test
   MIDlet only.
 
+## 2026-11-06 - aarch64 (chimera#536)
+
+The core is built for aarch64 too, from the same sources, and published
+beside the x86-64 package. Requested in chimera#536.
+
+- **The build goes by the CPU it runs on** (`uname -m`): miniBox's
+  code-generation flags for that CPU (its `meson.build`, the guest's
+  `waterbox_cpu_flags`), the configure triplets of OpenJDK and libffi,
+  the kernel and C++ header folders, the machine name `uname` gives inside
+  the box, and `sigsetjmp`'s one instruction. On aarch64 the linked core
+  goes through miniBox's `wbx-tp-rewrite.py` (2 thread-pointer reads), as
+  miniBox's own guests do.
+- **Patch 0003**, inside `CHIMERA_CORE`: the first aarch64 core stopped
+  before the VM started, "Could not allocate compressed class space:
+  33554432 bytes". On aarch64 HotSpot reserves its class space only at
+  addresses its compiled code decodes in one instruction (4G-aligned below
+  32G and so on) and gives up when none is free; the box has no memory
+  there. Zero decodes a class pointer in C++, right at any base, so the
+  space is reserved anywhere, as on x86-64. Both changes are under
+  `AARCH64`: the x86-64 core compiles to the same code.
+- **CI** builds and tests on ubuntu-24.04 and ubuntu-24.04-arm (the same
+  Ubuntu, so the same compiler and fonts), and the nightly publishes both
+  packages. `runsOn` lists the three aarch64 systems.
+- **Measured**: on each CPU the test script passed 37 and skipped 5 (the
+  games, which are not on a runner), the window test passed 2 and skipped
+  1, and Chimera's package checks passed.
+- **Not tried**: Windows on aarch64 and an Apple silicon Mac (CI ran Linux
+  only); a commercial game on aarch64; whether a movie made on one CPU
+  replays on the other (the runs on each CPU were compared only with each
+  other). The core exports no GuestFaultHandler, so a host with 16 KiB pages
+  does not refuse it for that.
+
 ## Not done
 
 - **Games** were run to their menus and a little further (above); none
