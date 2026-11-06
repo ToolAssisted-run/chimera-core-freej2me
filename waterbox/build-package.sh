@@ -101,7 +101,7 @@ json.dump({
                "origin": git("config", "--get", "remote.origin.url", default=""),
                "dirty": "-dirty" in "$core_version"},
     "toolchain": {"compiler": "gcc $gccver", "binutils": "$binutils_version",
-                  "target": "x86_64-linux-musl", "musl": "$musl_version"},
+                  "target": "$(uname -m)-linux-musl", "musl": "$musl_version"},
     "guestKit": {"name": "miniBox", "commit": "$guest_kit"},
     "upstream": {"name": "FreeJ2ME-Plus", "pin": "$fj_pin", "vm": {"name": "OpenJDK 21 (jdk21u)", "pin": "$jdk_pin"}},
     "builtOn": "$os_id",

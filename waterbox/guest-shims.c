@@ -155,7 +155,11 @@ int uname(struct utsname *u)
 	strcpy(u->nodename, "minibox");
 	strcpy(u->release, "6.0.0");
 	strcpy(u->version, "#1");
+#ifdef __aarch64__
+	strcpy(u->machine, "aarch64");
+#else
 	strcpy(u->machine, "x86_64");
+#endif
 	return 0;
 }
 
@@ -260,7 +264,11 @@ int sigaltstack(const stack_t *restrict ss, stack_t *restrict old)
 
 /* The box delivers no signals, so there is no mask to save: sigsetjmp is
  * setjmp (HotSpot's crash protection, used only while reporting an error). */
+#ifdef __aarch64__
+__asm__(".text\n.globl sigsetjmp\n.type sigsetjmp,@function\nsigsetjmp:\n\tb setjmp\n");
+#else
 __asm__(".text\n.globl sigsetjmp\n.type sigsetjmp,@function\nsigsetjmp:\n\tjmp setjmp\n");
+#endif
 
 /* Zero's budget (bytecodeInterpreter.cpp, CHIMERA_ZERO_BUDGET): 1000 backward
  * branches or method entries cost 20 us of the machine's time, and the

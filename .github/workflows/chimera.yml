@@ -47,9 +47,22 @@ env:
 jobs:
 
   gate:
-    name: build and test (the sandbox, the package, Chimera's package checks)
-    runs-on: ubuntu-latest
+    # Once per CPU, each on a runner of that CPU: a package is machine code for
+    # one CPU, and miniBox's guest toolchain builds for the CPU it runs on. The
+    # same Ubuntu on both, so the same compiler and the same fonts.
+    name: build and test for ${{ matrix.arch }} (the sandbox, the package, Chimera's package checks)
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+            jdk: /usr/lib/jvm/java-21-openjdk-amd64
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            jdk: /usr/lib/jvm/java-21-openjdk-arm64
     steps:
       - uses: actions/checkout@v6
         with:
@@ -77,7 +90,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/qt
-          key: qt-6.12.0-linux-aqt-3.3.0
+          key: qt-6.12.0-linux-${{ matrix.arch }}-aqt-3.3.0
 
       - name: Build Chimera (the engine, chimera-run and the window)
         run: chimera-checkout/tools/ci-chimera.sh "$HOME/qt"
@@ -88,7 +101,7 @@ jobs:
           path: |
             chimera-checkout/extern/chimera-common-minibox/build/meson-linux
             chimera-checkout/extern/chimera-common-minibox/build/meson-cpp
-          key: guest-cpp-${{ runner.os }}-${{ hashFiles('chimera-checkout/extern/chimera-common-minibox/.git') }}-${{ hashFiles('chimera-checkout/extern/chimera-common-minibox/meson.build') }}
+          key: guest-cpp-${{ runner.os }}-${{ matrix.arch }}-${{ hashFiles('chimera-checkout/extern/chimera-common-minibox/.git') }}-${{ hashFiles('chimera-checkout/extern/chimera-common-minibox/meson.build') }}
 
       - name: Build miniBox (the sandbox, and its C++ toolchain)
         run: |
@@ -103,12 +116,12 @@ jobs:
 
       - name: Build OpenJDK (Zero) for this machine
         env:
-          BOOT_JDK: /usr/lib/jvm/java-21-openjdk-amd64
+          BOOT_JDK: ${{ matrix.jdk }}
         run: sh ./waterbox/build-jdk.sh
 
       - name: Build the Java half, the guest, the native runner and the test MIDlet
         env:
-          BOOT_JDK: /usr/lib/jvm/java-21-openjdk-amd64
+          BOOT_JDK: ${{ matrix.jdk }}
         run: |
           mb="$PWD/chimera-checkout/extern/chimera-common-minibox"
           sh ./waterbox/build-java.sh
@@ -122,7 +135,7 @@ jobs:
         # built by hand is stamped "+local" instead.
         env:
           CORE_VERSION: ${{ github.sha }}
-          BOOT_JDK: /usr/lib/jvm/java-21-openjdk-amd64
+          BOOT_JDK: ${{ matrix.jdk }}
         run: sh ./waterbox/build-package.sh -r "$GITHUB_WORKSPACE/chimera-checkout"
 
       - name: Run the test script
@@ -162,7 +175,7 @@ jobs:
       - name: Upload the package
         uses: actions/upload-artifact@v7
         with:
-          name: freej2me-${{ github.sha }}
+          name: freej2me-${{ github.sha }}-${{ matrix.arch }}
           path: chimera-checkout/build/Cores/freej2me.chimeraCore
           if-no-files-found: error
 
@@ -170,7 +183,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: build-logs
+          name: build-logs-${{ matrix.arch }}
           path: |
             gate.out
             window.out
@@ -192,3 +205,4 @@ jobs:
       core-id: freej2me
       artifact: freej2me-${{ github.sha }}
       package: freej2me.chimeraCore
+      arches: x86_64 aarch64
