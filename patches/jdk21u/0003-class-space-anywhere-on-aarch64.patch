@@ -1,0 +1,40 @@
+diff --git a/src/hotspot/share/memory/metaspace.cpp b/src/hotspot/share/memory/metaspace.cpp
+index f3008084254..5a8a3e2fa26 100644
+--- a/src/hotspot/share/memory/metaspace.cpp
++++ b/src/hotspot/share/memory/metaspace.cpp
+@@ -582,7 +582,9 @@ bool Metaspace::class_space_is_initialized() {
+ // On error, returns an unreserved space.
+ ReservedSpace Metaspace::reserve_address_space_for_compressed_classes(size_t size) {
+ 
+-#if defined(AARCH64) || defined(PPC64)
++// CHIMERA_CORE: no search for a base the compilers like (see
++// CompressedKlassPointers::is_valid_base): reserve anywhere, as on x86-64.
++#if (defined(AARCH64) || defined(PPC64)) && !defined(CHIMERA_CORE)
+   const size_t alignment = Metaspace::reserve_alignment();
+ 
+   // AArch64: Try to align metaspace class space so that we can decode a
+@@ -646,7 +648,7 @@ ReservedSpace Metaspace::reserve_address_space_for_compressed_classes(size_t siz
+   }
+ #endif // defined(AARCH64) || defined(PPC64)
+ 
+-#ifdef AARCH64
++#if defined(AARCH64) && !defined(CHIMERA_CORE)
+   // Note: on AARCH64, if the code above does not find any good placement, we
+   // have no recourse. We return an empty space and the VM will exit.
+   return ReservedSpace();
+diff --git a/src/hotspot/share/oops/compressedOops.cpp b/src/hotspot/share/oops/compressedOops.cpp
+index 84ab807e4fb..d96db272b8b 100644
+--- a/src/hotspot/share/oops/compressedOops.cpp
++++ b/src/hotspot/share/oops/compressedOops.cpp
+@@ -268,7 +268,10 @@ void CompressedKlassPointers::initialize(address addr, size_t len) {
+ // Given an address p, return true if p can be used as an encoding base.
+ //  (Some platforms have restrictions of what constitutes a valid base address).
+ bool CompressedKlassPointers::is_valid_base(address p) {
+-#ifdef AARCH64
++// CHIMERA_CORE: Zero decodes a class pointer in C++, base + (narrow << shift),
++// which is right at any base; the rules below are the compilers' (a decode in
++// one MOVK). miniBox places memory where it has it, above 32G.
++#if defined(AARCH64) && !defined(CHIMERA_CORE)
+   // Below 32G, base must be aligned to 4G.
+   // Above that point, base must be aligned to 32G
+   if (p < (address)(32 * G)) {
