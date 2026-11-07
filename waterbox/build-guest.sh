@@ -45,7 +45,7 @@ kin="${KERNEL_INCLUDE:-/usr/include}"
 if [ ! -d "$g/kernel-include/linux" ]; then
 	mkdir -p "$g/kernel-include"
 	cp -R "$kin/linux" "$kin/asm-generic" "$g/kernel-include/"
-	if [ -d "$kin/x86_64-linux-gnu/asm" ]; then cp -R "$kin/x86_64-linux-gnu/asm" "$g/kernel-include/"; else cp -R "$kin/asm" "$g/kernel-include/"; fi
+	if [ -d "$kin/$(uname -m)-linux-gnu/asm" ]; then cp -R "$kin/$(uname -m)-linux-gnu/asm" "$g/kernel-include/"; else cp -R "$kin/asm" "$g/kernel-include/"; fi
 fi
 xin="${JDK_EXTRA_ROOT:+$JDK_EXTRA_ROOT/usr/include}"
 xin="${xin:-/usr/include}"
@@ -64,7 +64,16 @@ logged() {
 	fi
 }
 
-gcc_guest="gcc -specs=$sr/lib/musl-gcc.specs -mcmodel=large -mno-red-zone -mstack-protector-guard=global -fno-stack-protector -fno-pic -fno-pie -fcf-protection=none"
+# The guest is machine code for the CPU this builds on (miniBox runs a guest
+# on a host of its own CPU). cpu_flags are miniBox's own for that CPU
+# (its meson.build, waterbox_cpu_flags); x86-64 adds no CET.
+arch="$(uname -m)"
+case "$arch" in
+	x86_64) cpu_flags="-mcmodel=large -mno-red-zone -mno-tls-direct-seg-refs -fcf-protection=none" ;;
+	aarch64) cpu_flags="-mbranch-protection=none -mno-outline-atomics -ffp-contract=off -fsigned-char -ffixed-x18" ;;
+	*) echo "miniBox runs x86_64 and aarch64 guests, not $arch" >&2; exit 1 ;;
+esac
+gcc_guest="gcc -specs=$sr/lib/musl-gcc.specs $cpu_flags -mstack-protector-guard=global -fno-stack-protector -fno-pic -fno-pie"
 
 # libffi, from its git tree (autogen.sh makes its configure)
 if [ ! -f "$g/libffi/lib/libffi.a" ]; then
@@ -72,15 +81,15 @@ if [ ! -f "$g/libffi/lib/libffi.a" ]; then
 	mkdir -p "$g/libffi-src" "$g/libffi-build"
 	(cd "$root/extern/libffi" && git archive HEAD) | tar -x -C "$g/libffi-src"
 	(cd "$g/libffi-src" && logged "$g/libffi-autogen.log" ./autogen.sh)
-	(cd "$g/libffi-build" && logged "$g/libffi-configure.log" "$g/libffi-src/configure" --host=x86_64-linux-musl \
-		--build=x86_64-pc-linux-gnu --prefix="$g/libffi" --disable-shared --enable-static --disable-exec-static-tramp \
+	(cd "$g/libffi-build" && logged "$g/libffi-configure.log" "$g/libffi-src/configure" --host="$arch-linux-musl" \
+		--build="$arch-pc-linux-gnu" --prefix="$g/libffi" --disable-shared --enable-static --disable-exec-static-tramp \
 		--disable-docs --with-pic=no CC="$gcc_guest -O2" CFLAGS=)
 	logged "$g/libffi-make.log" make -C "$g/libffi-build" -j "$jobs" install
 fi
 
 # HotSpot and the native libraries
 python3 "$here/build-guest.py" --jdk "$jb" --out "$g/obj" --sysroot "$sr" --ffi "$g/libffi/include" \
-	--kernel "$g/kernel-include" --zlib "$root/extern/jdk21u/src/java.base/share/native/libzip/zlib" -j "$jobs"
+	--kernel "$g/kernel-include" --cpu-flags "$cpu_flags" --zlib "$root/extern/jdk21u/src/java.base/share/native/libzip/zlib" -j "$jobs"
 
 # the pack: the runtime's files the VM reads (no programs, no native
 # libraries - those are linked in), and the two jars
@@ -147,7 +156,7 @@ wraps="mmap munmap sysconf open creat read readv write writev pread pwrite lseek
 	link symlink readlink chdir flock posix_fadvise opendir readdir closedir fopen"
 wrapflags="$(for w in $wraps; do printf -- '-Wl,--wrap=%s ' "$w"; done)"
 # shellcheck disable=SC2086
-g++ -specs="$sr/lib/musl-gcc.specs" -mcmodel=large -fno-pic -fno-pie \
+g++ -specs="$sr/lib/musl-gcc.specs" $cpu_flags -fno-pic -fno-pie \
 	-static -no-pie -Wl,--eh-frame-hdr,-O2,--no-relax,-z,stack-size=8388608 -T "$mb/source/guest/linkscript.T" \
 	-Wl,-u,pthread_once -Wl,-u,pthread_cond_wait -Wl,-u,pthread_cond_broadcast -Wl,-u,pthread_key_create \
 	-Wl,-u,pthread_mutexattr_init -Wl,-u,pthread_mutexattr_settype -Wl,-u,pthread_mutexattr_destroy \
@@ -162,6 +171,10 @@ g++ -specs="$sr/lib/musl-gcc.specs" -mcmodel=large -fno-pic -fno-pie \
 # sandbox reads it. The function names stay, for a crash report
 # (chimera#301: core.wbx 108.8 MB to 84.8 MB, the package 40.7 MB to 32.8 MB)
 strip --strip-debug "$g/core.wbx"
+# on aarch64 the machine keeps the thread pointer in a word of memory, and
+# miniBox refuses an image that still reads TPIDR_EL0 (its MACHINE-SPEC,
+# "aarch64"): every read is pointed at that word, as miniBox's own link does
+[ "$arch" = aarch64 ] && python3 "$mb/source/guest/wbx-tp-rewrite.py" "$g/core.wbx"
 sh "$mb/source/guest/check-wbx.sh" "$g/core.wbx"
 echo "built $g/core.wbx"
 

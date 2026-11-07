@@ -5,7 +5,8 @@ same sources, the same generated headers, the same defines, with the guest
 toolchain's flags in place of the host's.
 
   build-guest.py --jdk <jdk build> --out <object dir> --sysroot <guest sysroot>
-                 --ffi <libffi include dir> --kernel <kernel header dir> [-j N]
+                 --ffi <libffi include dir> --kernel <kernel header dir>
+                 --cpu-flags "<flags>" [-j N]
 
 What changes for the guest, and why:
   -DCHIMERA_CORE           the patches' changes (patches/jdk21u)
@@ -16,11 +17,14 @@ What changes for the guest, and why:
                            compiler's kind; HotSpot keeps its own with
                            pthread keys
   -DMUSL_LIBC              the guest's C library is musl
-  -mcmodel=large ...       what every guest object is compiled with
+  --cpu-flags, -fno-pic ... what every guest object is compiled with: miniBox's
+                           code-generation flags for this CPU (x86_64 or
+                           aarch64; build-guest.sh says which)
 SPDX-License-Identifier: MIT"""
 import argparse
 import json
 import os
+import platform
 import re
 import shlex
 import subprocess
@@ -34,6 +38,7 @@ ap.add_argument("--sysroot", required=True)
 ap.add_argument("--ffi", required=True)
 ap.add_argument("--kernel", required=True)
 ap.add_argument("--zlib", required=True)
+ap.add_argument("--cpu-flags", required=True)
 ap.add_argument("-j", type=int, default=os.cpu_count() or 4)
 a = ap.parse_args()
 
@@ -47,17 +52,16 @@ LIBS = [("java.base", l) for l in ("libjava", "libjimage", "libnet", "libnio", "
        [("java.prefs", "libprefs")]
 
 GUEST = [
-    "-specs=" + a.sysroot + "/lib/musl-gcc.specs",
-    "-mcmodel=large", "-mno-red-zone", "-fno-pic", "-fno-pie",
-    "-mstack-protector-guard=global", "-fno-stack-protector", "-fcf-protection=none",
+    "-specs=" + a.sysroot + "/lib/musl-gcc.specs"] + a.cpu_flags.split() + [
+    "-fno-pic", "-fno-pie", "-mstack-protector-guard=global", "-fno-stack-protector",
     "-DMUSL_LIBC", "-DLIBC=musl", "-DCHIMERA_CORE", "-DSTATIC_BUILD", "-DUSE_LIBRARY_BASED_TLS_ONLY",
     "-D__thread=", "-Dthread_local=", "-D_Thread_local=",
     "-I" + a.ffi, "-g1",
     "-idirafter", a.kernel,
 ]
 CXX_EXTRA = ["-nostdinc++", "-I%s/include/c++/%s" % (a.sysroot, GCCVER),
-             "-I%s/include/c++/%s/x86_64-linux-musl" % (a.sysroot, GCCVER)]
-DROP = re.compile(r"^(-fPIC|-fstack-protector.*|-D_FORTIFY_SOURCE.*|-DLIBC=gnu|-g|-gdwarf-\d|-pipe|"
+             "-I%s/include/c++/%s/%s-linux-musl" % (a.sysroot, GCCVER, platform.machine())]
+DROP = re.compile(r"^(-fPIC|-mbranch-protection=.*|-moutline-atomics|-fstack-protector.*|-D_FORTIFY_SOURCE.*|-DLIBC=gnu|-g|-gdwarf-\d|-pipe|"
                   r"-fdebug-prefix-map=.*|-frandom-seed=.*)$")
 
 

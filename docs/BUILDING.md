@@ -1,7 +1,9 @@
 # Building
 
-This core is built on Linux (x86-64). The result, `core.wbx`, is one file
-that runs in Chimera on Linux and on Windows.
+This core is built on Linux, x86-64 or aarch64: the build makes a core for
+the CPU it runs on. The result, `core.wbx`, is one file that runs in Chimera
+on Linux, Windows and macOS of that CPU. There is no cross build: an aarch64
+core is built on an aarch64 machine (CI uses ubuntu-24.04-arm).
 
 ## What is needed
 

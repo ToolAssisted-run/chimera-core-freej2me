@@ -38,14 +38,15 @@ if [ ! -f "$out/spec.gmk" ]; then
 		--with-version-opt=chimera \
 		--disable-ccache
 	# on WSL configure takes the machine for Windows unless it is told
-	set -- "$@" --build=x86_64-pc-linux-gnu --host=x86_64-pc-linux-gnu --target=x86_64-pc-linux-gnu
+	cpu="$(uname -m)"
+	set -- "$@" --build="$cpu-pc-linux-gnu" --host="$cpu-pc-linux-gnu" --target="$cpu-pc-linux-gnu"
 	[ -n "${BOOT_JDK:-}" ] && set -- "$@" --with-boot-jdk="$BOOT_JDK"
 	if [ -n "${JDK_EXTRA_ROOT:-}" ]; then
 		PATH="$JDK_EXTRA_ROOT/usr/bin:$PATH"
 		export PATH
 		inc="$JDK_EXTRA_ROOT/usr/include"
 		set -- "$@" --with-cups-include="$inc" --with-fontconfig-include="$inc" \
-			--with-x=yes --x-includes="$inc" --x-libraries=/usr/lib/x86_64-linux-gnu
+			--with-x=yes --x-includes="$inc" --x-libraries="/usr/lib/$cpu-linux-gnu"
 	fi
 	(cd "$out" && bash "$root/extern/jdk21u/configure" "$@")
 fi
