@@ -54,6 +54,21 @@ static int g_newPicture;
 static JNIEnv *g_env;
 static jclass g_frontend;
 static jmethodID g_start, g_frame;
+/* Send, the phone's call key: whether it is down, and whether the game was
+ * last told so. It is no key of Frontend.frame()'s, and the game is told of
+ * it from here, through JNI, straight to FreeJ2ME's MobilePlatform.keyPressed
+ * and keyReleased. Nothing of ours is added to the Java side: the machine's
+ * clock counts the Java code a game runs (a longer jar to open counts too),
+ * so a game that never has Send pressed must run not one instruction more
+ * than it did before Send existed. Its classes, methods and fields are
+ * looked up on the frame Send first changes, and not before. */
+#define SEND_NOKIA (-10) /* Mobile.NOKIA_SEND, every Phone Keys setting but: */
+#define SEND_SKT 190     /* Canvas.KEY_CALL, which FreeJ2ME defines for SKT */
+/* and none on MotoA1000, whose -10 is the left soft key */
+static int g_sendNow, g_sendTold;
+static jclass g_platform, g_mobile;
+static jmethodID g_keyPressed, g_keyReleased;
+static jfieldID g_skt, g_motoA1000;
 static jfieldID g_lcd, g_w, g_h, g_audioField, g_errorField, g_newPictureField;
 
 void driver_add_option(const char *opt)
@@ -166,9 +181,47 @@ static void copy_outputs(void)
 	g_newPicture = (*env)->GetStaticBooleanField(env, g_frontend, g_newPictureField) ? 1 : 0;
 }
 
+/* tells the game that Send went down or came up; 0 if FreeJ2ME's classes
+ * are not what this expects (then a Java exception is pending) */
+static int send_to_game(int down)
+{
+	JNIEnv *env = g_env;
+	if (!g_platform) {
+		jclass p = (*env)->FindClass(env, "org/recompile/mobile/MobilePlatform");
+		jclass m = (*env)->FindClass(env, "org/recompile/mobile/Mobile");
+		if (!p || !m)
+			return 0;
+		g_platform = (jclass)(*env)->NewGlobalRef(env, p);
+		g_mobile = (jclass)(*env)->NewGlobalRef(env, m);
+		g_keyPressed = (*env)->GetStaticMethodID(env, p, "keyPressed", "(I)V");
+		g_keyReleased = (*env)->GetStaticMethodID(env, p, "keyReleased", "(I)V");
+		g_skt = (*env)->GetStaticFieldID(env, m, "skt", "Z");
+		g_motoA1000 = (*env)->GetStaticFieldID(env, m, "motoA1000", "Z");
+		if (!g_keyPressed || !g_keyReleased || !g_skt || !g_motoA1000) {
+			g_platform = NULL;
+			return 0;
+		}
+	}
+	const int code = (*env)->GetStaticBooleanField(env, g_mobile, g_skt) ? SEND_SKT
+		: (*env)->GetStaticBooleanField(env, g_mobile, g_motoA1000) ? 0 : SEND_NOKIA;
+	if (code)
+		(*env)->CallStaticVoidMethod(env, g_platform, down ? g_keyPressed : g_keyReleased, (jint)code);
+	return !(*env)->ExceptionCheck(env);
+}
+
 static int do_frame(void)
 {
 	JNIEnv *env = g_env;
+	/* Send is told to the game only on the frame it changes, and before the
+	 * frame's other keys: frame() hands those over first thing, so the game
+	 * gets all of this frame's keys in the same frame, as it always did */
+	if (g_sendNow != g_sendTold) {
+		g_sendTold = g_sendNow;
+		if (!send_to_game(g_sendNow)) {
+			describe_exception("error.frame_did_not_finish", "error.frame_did_not_finish_because");
+			return 0;
+		}
+	}
 	(*env)->CallStaticVoidMethod(env, g_frontend, g_frame, (jint)g_keys, (jboolean)(g_touch != 0), (jint)g_x, (jint)g_y);
 	if ((*env)->ExceptionCheck(env)) {
 		describe_exception("error.frame_did_not_finish", "error.frame_did_not_finish_because");
@@ -294,8 +347,9 @@ int driver_start(const char *classpath, const char *game, int width, int height,
 	return ok;
 }
 
-int driver_frame(int keys, int touch, int x, int y)
+int driver_frame(int keys, int touch, int x, int y, int send)
 {
+	g_sendNow = send;
 	g_keys = keys;
 	g_touch = touch;
 	g_x = x;

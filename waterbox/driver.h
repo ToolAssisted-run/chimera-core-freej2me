@@ -17,7 +17,7 @@ void driver_set_video_buffer(uint32_t *buf, int pixels);
 int driver_start(const char *classpath, const char *game, int width, int height, const char *const *settings, int nsettings);
 /* Runs one frame: keys is a bit for each of FreeJ2ME's 20 keys, touch says
  * the screen is touched at x, y (pixels). 1 on success. */
-int driver_frame(int keys, int touch, int x, int y);
+int driver_frame(int keys, int touch, int x, int y, int send);
 const char *driver_error(void);
 /* the last frame's picture, 0xAARRGGBB, and its 735 frames of 16-bit stereo */
 const uint32_t *driver_video(int *w, int *h);

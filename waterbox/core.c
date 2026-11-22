@@ -68,10 +68,9 @@ static const struct { const char *name; int fj; } kKeys[] = {
 #define BUTTON_TOUCH KEY_COUNT
 /* Send, the call key, comes after Touch so that every button a movie or a
  * project made before knows keeps its place (a movie's entry is read by
- * position). FreeJ2ME's key 23: 20 to 22 are its own fast forward, rotate
- * and pause keys, which this front end does not use. */
+ * position). It is not one of the keys frame() takes: the driver tells the
+ * game of it in a call of its own, on the frame it changes only. */
 #define BUTTON_SEND (KEY_COUNT + 1)
-#define SEND_KEY 23
 #define BUTTON_COUNT (KEY_COUNT + 2)
 static int g_held[BUTTON_COUNT];
 
@@ -340,8 +339,6 @@ ECL_EXPORT void FrameAdvance(uint64_t packed)
 	for (int i = 0; i < KEY_COUNT; i++)
 		if (g_held[i])
 			keys |= 1 << kKeys[i].fj;
-	if (g_held[BUTTON_SEND])
-		keys |= 1 << SEND_KEY;
 	int w, h;
 	driver_video(&w, &h);
 	if (w <= 0 || h <= 0) {
@@ -350,7 +347,7 @@ ECL_EXPORT void FrameAdvance(uint64_t packed)
 	}
 	const int x = (int)((int64_t)clampi(g_axis[kTouchX], 0, 65535) * w / 65536);
 	const int y = (int)((int64_t)clampi(g_axis[kTouchY], 0, 65535) * h / 65536);
-	if (!driver_frame(keys, g_held[BUTTON_TOUCH], x, y)) {
+	if (!driver_frame(keys, g_held[BUTTON_TOUCH], x, y, g_held[BUTTON_SEND])) {
 		/* the program died: the machine stops where it is */
 		fprintf(stderr, "freej2me: %s\n", driver_error());
 		g_running = 0;

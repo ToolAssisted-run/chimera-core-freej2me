@@ -487,43 +487,56 @@ call key (Send). The core had no such button.
   Touch in a movie made earlier into a Send. At the end, a movie or project
   made before this change replays as it did; a movie made after it has one
   more column.
-- **The code it sends** (patch 0003, `Mobile.getMobileKey`, key 23; keys 20
-  to 22 are FreeJ2ME's own fast forward, rotate and pause hotkeys, so 23 is
-  the first free one). FreeJ2ME defines a call key for two of the Phone Keys
-  settings only:
+- **The code it sends** (FreeJ2ME's key 23 for it; 20 to 22 are its own
+  fast forward, rotate and pause hotkeys). FreeJ2ME defines a call key for
+  two of the Phone Keys settings only:
   - Standard, NokiaKeyboard, LG, Motorola, MotoTriplets, MotoV8, Sagem,
     Siemens, KDDI and BlackBerry89: -10, the Nokia code. FreeJ2ME defines no
     other code for them, and -10 is not one of their other keys' codes.
+    (A Siemens phone's real Send code may be another; it is not guessed.)
   - SKT: 190 (`Canvas.KEY_CALL`, which FreeJ2ME defines for SKT).
   - MotoA1000: nothing. Its left soft key is -10, so sending -10 would be
     that key twice. The game is given no key at all.
   No code is a game action (`getGameAction` gives 0), so the key does not
-  move anything in FreeJ2ME's own menus. Some real phones use another code
-  for Send (a Siemens phone's is -11, for one); it is not added where
-  FreeJ2ME does not say so.
-- **How it arrives** (`java/chimera/Frontend.java`): the key goes to
-  `keyPressed` when it goes down and `keyReleased` when it comes up, like the
-  others. It does not repeat while held: it has no slot among FreeJ2ME's
-  `pressedKeys`, which are for its own front ends' keys. End (the red key,
-  -11) is not added: on a real phone it closes the program.
+  move anything in FreeJ2ME's own menus.
+- **It costs nothing while it is not pressed** (owner, 2026-11-22). The
+  sandbox's clock counts the Java code a game runs, so a first version that
+  tested Send inside `Frontend.frame` made every frame a few instructions
+  longer, and a movie made before replayed with sound and lag a frame or
+  two off. Two more tries showed how little it takes: a new method in
+  `Frontend` still moved the lag by 1 frame, and a new class in the front
+  end's jar moved it by up to 3 (opening a longer jar is Java code too).
+  So nothing of ours is added to the Java side. `driver.c` remembers
+  whether the game was last told Send was down, and only on a frame where
+  that changes it calls FreeJ2ME's own `MobilePlatform.keyPressed` or
+  `keyReleased` through JNI, with the code worked out in C from FreeJ2ME's
+  `Mobile.skt` and `Mobile.motoA1000` (the codes -10 and 190 are copied
+  into `driver.c`, with the names they have in FreeJ2ME). The classes,
+  methods and fields are looked up on the frame Send first changes, not at
+  start, since looking a class up runs Java code too. The call goes just
+  before `Frontend.frame`, which hands the frame's other keys over first
+  thing, so Send reaches the game in the same frame as they do. Send does
+  not repeat while held. End (the red key, -11) is not added: on a real
+  phone it closes the program.
 - **Tested**: the test MIDlet draws a square for each of -10 given to
   `keyPressed`, -10 given to `keyReleased`, a game action given for -10 (which
   must not happen) and 190. New tests `j2me:send` (Send gives green and cyan
   and no red; Clear gives none) and `j2me:send-phones` (SKT gives 190 and
   not -10; MotoA1000 gives nothing). `package:controls` now expects 22
-  buttons, Send last. Run on a machine with the package: the test script
-  passed 39 and skipped 5 (the commercial games, which are not here), and
-  the window test passed 2 and skipped 1. Broken on purpose once: with a
-  test MIDlet that looked for -11 instead of -10, `j2me:send` finds no
-  squares and fails.
-- **What a movie made before sees**: the pictures are the same. With all 21
-  old buttons pressed over 400 frames, the 10 picture digests match the
-  build before. The memory digests differ from the first report on (the
-  Java code changed) and the sound and lag counts differ by 1 to 3 frames
-  from frame 240 on, because the sandbox's clock counts the code the game
-  runs and the front end now runs a few more instructions each frame. A
-  movie holds the package's version and Chimera warns when it differs, as
-  for any change to the core.
+  buttons, Send last. With the package in a Chimera checkout, the test
+  script passed 39 and skipped 5 (the commercial games, which are not
+  here), and the window test passed 2 and skipped 1. Broken on purpose
+  once: with a test MIDlet that looked for -11 instead of -10, `j2me:send`
+  finds no squares and fails.
+- **What a movie made before sees**: nothing differs. A 400-frame run with
+  all 21 old buttons pressed, on the old test MIDlet, was compared with the
+  build of 19 November (the one before Send) and with a build of the
+  sources before this change: the pictures, the sound and the lag count
+  are the same at all 10 reports. The memory digest (`ram`) is not the
+  same, from the first report, before any key: the core's own code and data
+  changed (the build of the sources before this change matches the old one
+  in all columns, so the build itself is repeatable). That is the memory
+  of the machine, not what the game does; its cause was not traced further.
 
 ## Not done
 
