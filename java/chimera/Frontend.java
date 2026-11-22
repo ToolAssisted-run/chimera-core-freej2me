@@ -112,6 +112,8 @@ public final class Frontend
 		return true;
 	}
 
+	private static final int SEND = 23;
+
 	/* keys: bit i held means FreeJ2ME's key i (Mobile.getMobileKey) is down.
 	   touch: the screen is touched at (x, y), in pixels of the picture. */
 	public static void frame(int keys, boolean touch, int x, int y)
@@ -131,6 +133,19 @@ public final class Frontend
 				MobilePlatform.pressedKeys[i] = false;
 				if (lastPressedKey == i) { lastPressedKey = pressedKey(); }
 				MobilePlatform.keyReleased(Mobile.getMobileKey(i));
+			}
+		}
+		// Send (key 23) is outside the keys FreeJ2ME's own front ends know
+		// (20 to 22 are its fast forward, rotate and pause hotkeys), so it
+		// has no slot in pressedKeys and does not repeat
+		final boolean sendNow = ((keys >> SEND) & 1) != 0, sendWas = ((held >> SEND) & 1) != 0;
+		if (sendNow != sendWas)
+		{
+			final int code = Mobile.getMobileKey(SEND);
+			if (code != 0)
+			{
+				if (sendNow) { MobilePlatform.keyPressed(code); }
+				else { MobilePlatform.keyReleased(code); }
 			}
 		}
 		held = keys;

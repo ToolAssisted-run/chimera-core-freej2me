@@ -121,7 +121,7 @@ check "package:no-debug-info" "core.wbx carries no debugging information, which 
 
 folder t '{}' "$midlet"
 "$runwbx" "$core" "$work/t" --frames 1 --list-panel > "$work/panel.out" 2> /dev/null
-check "package:controls" "the package declares the core's own $(grep -c '^panel' "$work/panel.out") buttons, in the core's order, and its 2 axes" \
+check "package:controls" "the package declares the core's own $(grep -c '^panel' "$work/panel.out") buttons, in the core's order (Send last, after Touch), and its 2 axes" \
 	python3 - "$here/waterbox.config" "$work/panel.out" <<'PY'
 import json, sys
 cfg = json.load(open(sys.argv[1]))
@@ -129,7 +129,7 @@ lines = open(sys.argv[2]).read().splitlines()
 buttons = [l[l.index("'") + 1:l.rindex("'")] for l in lines if l.startswith("panel ")]
 axes = [l for l in lines if l.startswith("axis ")]
 i = cfg["input"]
-sys.exit(0 if i["buttons"] == buttons and len(buttons) == 21 and [a["name"] for a in i["axes"]] == ["Touch X", "Touch Y"] and len(axes) == 2 else 1)
+sys.exit(0 if i["buttons"] == buttons and len(buttons) == 22 and [a["name"] for a in i["axes"]] == ["Touch X", "Touch Y"] and len(axes) == 2 else 1)
 PY
 
 if [ -n "$chimera_root" ] && [ -f "$chimera_root/source/ui/qt/key_codes.inc" ]; then
@@ -152,6 +152,33 @@ check "j2me:keys" "Right held from frame 150 moves the square: the reports are t
 box touch t --frames 300 --report 30 --press "$touch":150:20 --axis 0:16384:150:20 --axis 1:16384:150:20
 check "j2me:touch" "a touch at frame 150 leaves the MIDlet's mark: the reports are the idle run's before frame 150 and differ from it on" \
 	same_until "$work/idle.out" "$work/touch.out" 149
+
+# the Send key (chimera#638): the phone's call key reaches keyPressed and
+# keyReleased as -10 (a Nokia's code, the default), and nothing else is
+# drawn: the MIDlet paints a green square for -10 pressed, a cyan one for
+# -10 released, a red one if getGameAction(-10) was not 0 and a magenta one
+# for 190 (an SKT phone's call key). square <picture> <y>: the colour of the
+# 16x16 square at x 216, as bgr hex, or "none" if it is the background's
+send="$(index t Send)"
+square() { python3 - "$1" "$2" <<'PY'
+import sys
+d = open(sys.argv[1], "rb").read(); nl = d.index(b"\n"); w = int(d[:nl].split()[0]); px = d[nl + 1:]
+o = (int(sys.argv[2]) + 8) * w * 4 + 224 * 4
+b, g, r = px[o], px[o + 1], px[o + 2]
+print({(0, 255, 0): "green", (255, 255, 0): "cyan", (0, 0, 255): "red", (255, 0, 255): "magenta"}.get((b, g, r), "none"))
+PY
+}
+squares() { echo "$(square "$1" 130)/$(square "$1" 150)/$(square "$1" 170)/$(square "$1" 190)"; }
+box nosend t --frames 300 --report 30 --press "$(index t Clear)":150:5 --vid-out "$work/nosend.raw"
+box send t --frames 300 --report 30 --press "$send":150:5 --vid-out "$work/send.raw"
+check "j2me:send" "Send held for 5 frames gives the MIDlet keyPressed(-10) and keyReleased(-10) and no game action (pressed/released/action/190 squares: $(squares "$work/send.raw")); Clear instead gives $(squares "$work/nosend.raw")" \
+	cond '[ "$(squares "$work/send.raw")" = green/cyan/none/none ] && [ "$(squares "$work/nosend.raw")" = none/none/none/none ]'
+folder skt '{"phone":"SKT"}' "$midlet"
+folder a1000 '{"phone":"MotoA1000"}' "$midlet"
+box skt skt --frames 300 --report 30 --press "$send":150:5 --vid-out "$work/skt.raw"
+box a1000 a1000 --frames 300 --report 30 --press "$send":150:5 --vid-out "$work/a1000.raw"
+check "j2me:send-phones" "Phone Keys says the code Send sends: SKT gives 190 (squares $(squares "$work/skt.raw")); MotoA1000, whose -10 is Left Soft, gives the game nothing ($(squares "$work/a1000.raw"))" \
+	cond '[ "$(squares "$work/skt.raw")" = none/none/none/magenta ] && [ "$(squares "$work/a1000.raw")" = none/none/none/none ]'
 
 folder q '{"sound":"off"}' "$midlet"
 box quiet q --frames 300 --report 30

@@ -15,7 +15,7 @@ jdk21u|0002-zero-pays-for-the-code-it-runs|src/hotspot/share/interpreter/zero/by
 jdk21u|0003-class-space-anywhere-on-aarch64|src/hotspot/share/memory/metaspace.cpp src/hotspot/share/oops/compressedOops.cpp
 freej2me-plus|0001-a-soundfont-is-read-whole|src/javax/microedition/media/Manager.java
 freej2me-plus|0002-tickers-and-gauges-move-above-60|src/javax/microedition/lcdui/Ticker.java src/javax/microedition/lcdui/Gauge.java
-freej2me-plus|0003-chinese-text-encodings|src/org/recompile/mobile/Mobile.java src/org/recompile/mobile/MobilePlatform.java
+freej2me-plus|0003-chinese-text-encodings-and-the-send-key|src/org/recompile/mobile/Mobile.java src/org/recompile/mobile/MobilePlatform.java
 '
 
 for sub in jdk21u freej2me-plus libffi; do

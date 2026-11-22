@@ -66,7 +66,13 @@ static const struct { const char *name; int fj; } kKeys[] = {
 };
 #define KEY_COUNT ((int)(sizeof kKeys / sizeof kKeys[0]))
 #define BUTTON_TOUCH KEY_COUNT
-#define BUTTON_COUNT (KEY_COUNT + 1)
+/* Send, the call key, comes after Touch so that every button a movie or a
+ * project made before knows keeps its place (a movie's entry is read by
+ * position). FreeJ2ME's key 23: 20 to 22 are its own fast forward, rotate
+ * and pause keys, which this front end does not use. */
+#define BUTTON_SEND (KEY_COUNT + 1)
+#define SEND_KEY 23
+#define BUTTON_COUNT (KEY_COUNT + 2)
 static int g_held[BUTTON_COUNT];
 
 /* where the screen is touched, a fraction of the picture from 0 to 65535 */
@@ -305,7 +311,7 @@ ECL_EXPORT int Init(void)
 ECL_EXPORT int GetButtonCount(void) { return BUTTON_COUNT; }
 ECL_EXPORT const char *GetButtonName(int32_t i)
 {
-	return i >= 0 && i < KEY_COUNT ? kKeys[i].name : i == BUTTON_TOUCH ? "Touch" : "";
+	return i >= 0 && i < KEY_COUNT ? kKeys[i].name : i == BUTTON_TOUCH ? "Touch" : i == BUTTON_SEND ? "Send" : "";
 }
 ECL_EXPORT int IsButtonActive(int32_t i) { return i >= 0 && i < BUTTON_COUNT; }
 ECL_EXPORT void SetButton(int32_t i, int32_t state)
@@ -334,6 +340,8 @@ ECL_EXPORT void FrameAdvance(uint64_t packed)
 	for (int i = 0; i < KEY_COUNT; i++)
 		if (g_held[i])
 			keys |= 1 << kKeys[i].fj;
+	if (g_held[BUTTON_SEND])
+		keys |= 1 << SEND_KEY;
 	int w, h;
 	driver_video(&w, &h);
 	if (w <= 0 || h <= 0) {

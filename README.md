@@ -47,7 +47,7 @@ start from saved data: the zip Export Save Data writes.
 ## Buttons and settings
 
 - **Keys**: Up, Down, Left, Right, Fire, Left Soft, Right Soft, Num 0 to Num
-  9, Star, Pound and Clear.
+  9, Star, Pound, Clear and Send (the call key).
 - **Touch screen**: Touch, held where Touch X and Touch Y say.
 - **Settings**: Screen Size, Phone Keys (which maker's key codes the keys
   send), Frame Limit (2 to 80 pictures a second, or off), Sound, MIDI

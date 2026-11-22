@@ -12,8 +12,8 @@ import javax.microedition.rms.RecordStore;
  * ticking every 50 ms, text, a score saved to a record store every 30
  * frames, a touch that leaves a mark, Japanese text (the core's fallback
  * font), Chinese text read in the machine's encoding, and sound - a MIDI tune that loops,
- * a tone on Fire and a beep (a WAV made here) on 5. Everything it draws and
- * plays depends on the keys and the machine's clock, nothing on the host.
+ * a tone on Fire and a beep (a WAV made here) on 5, and squares that say
+ * which code the Send key gave. Everything it draws and plays depends on the keys and the machine's clock, nothing on the host.
  * SPDX-License-Identifier: MIT */
 public class TestMIDlet extends MIDlet {
     /* the four characters of "Chinese test", in GBK, read with the machine's text
@@ -70,7 +70,7 @@ public class TestMIDlet extends MIDlet {
     }
 
     static class Game extends GameCanvas implements Runnable {
-        int x = 100, y = 100, frames, ticks, saved, loaded = -1, tx = -1, ty = -1;
+        int sent, sentReleased, sentAction, sentSkt, x = 100, y = 100, frames, ticks, saved, loaded = -1, tx = -1, ty = -1;
         int[] trail = new int[64];
         Player music, sound;
         String audio = "";
@@ -104,7 +104,23 @@ public class TestMIDlet extends MIDlet {
         public void pointerPressed(int px, int py) { tx = px; ty = py; }
         public void pointerDragged(int px, int py) { tx = px; ty = py; }
 
+        /* the Send key (the phone's call key, code -10 on a Nokia): squares
+         * at the right of the screen say that keyPressed and keyReleased
+         * were given -10 (green and cyan), that Canvas.getGameAction(-10)
+         * was not 0 (red: it must be 0, Send is no game action) and that
+         * keyPressed was given 190, an SKT phone's call key (magenta) */
+        public void keyReleased(int code) {
+            if (code == -10) sentReleased++;
+        }
+
+        /* SKT phones call the key 190 (Canvas.KEY_CALL) */
+        private void skt(int code) {
+            if (code == 190) sentSkt++;
+        }
+
         public void keyPressed(int code) {
+            skt(code);
+            if (code == -10) { sent++; if (getGameAction(code) != 0) sentAction++; }
             try {
                 if (code == FIRE || getGameAction(code) == FIRE) Manager.playTone(72 + (frames % 12), 100, 80);
                 if (code == KEY_NUM5) { sound.stop(); sound.setMediaTime(0); sound.start(); }
@@ -135,6 +151,10 @@ public class TestMIDlet extends MIDlet {
                 g.drawString(new String(CHINESE), 2, 92, Graphics.TOP | Graphics.LEFT);
                 for (int i = 0; i < 64; i++)
                     if (trail[i] != 0) g.drawRect(trail[i] / 1000, trail[i] % 1000, 3, 3);
+                if (sent > 0) { g.setColor(0x00ff00); g.fillRect(216, 130, 16, 16); }
+                if (sentReleased > 0) { g.setColor(0x00ffff); g.fillRect(216, 150, 16, 16); }
+                if (sentAction > 0) { g.setColor(0xff0000); g.fillRect(216, 170, 16, 16); }
+                if (sentSkt > 0) { g.setColor(0xff00ff); g.fillRect(216, 190, 16, 16); }
                 if (tx >= 0) { g.setColor(0x40ff40); g.fillArc(tx - 5, ty - 5, 10, 10, 0, 360); }
                 flushGraphics();
                 frames++;

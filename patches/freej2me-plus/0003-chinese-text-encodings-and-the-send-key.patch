@@ -1,5 +1,5 @@
 diff --git a/src/org/recompile/mobile/Mobile.java b/src/org/recompile/mobile/Mobile.java
-index eb9607db..50791315 100644
+index eb9607db..52e36f0f 100644
 --- a/src/org/recompile/mobile/Mobile.java
 +++ b/src/org/recompile/mobile/Mobile.java
 @@ -55,7 +55,8 @@ public class Mobile
@@ -12,6 +12,24 @@ index eb9607db..50791315 100644
  	public static final byte ISO_8859_1 = 0;
  	public static final byte SHIFT_JIS  = 1;
  	public static final byte EUC_KR     = 2;
+@@ -398,6 +399,17 @@ public class Mobile
+ 
+ 	public static final int getMobileKey(int keycode)
+ 	{
++		// Send, the phone call key (chimera core: key 23, which FreeJ2ME has no use for: its 20 to 22 are the
++		// fast forward, rotate and pause hotkeys). Upstream defines a Send code for two of the phone mappings:
++		// Nokia, which is also what every mapping without a code of its own gets (NOKIA_SEND, -10), and SKT
++		// (Canvas.KEY_CALL, 190). MotoA1000 uses -10 for its left soft key, so it sends nothing (0) rather than a
++		// second key with that code. Nothing else here maps to getGameAction, so a game gets no action from it.
++		if(keycode == 23)
++		{
++			if(skt) { return Canvas.KEY_CALL; }
++			if(motoA1000) { return 0; }
++			return NOKIA_SEND;
++		}
+ 		// These keys are overridden by the modifier variables (comments simulate the Libretro interface with a NS Pro Controller)
+ 		if(blackberry89)
+ 		{
 diff --git a/src/org/recompile/mobile/MobilePlatform.java b/src/org/recompile/mobile/MobilePlatform.java
 index f5a1ea8d..1478e117 100644
 --- a/src/org/recompile/mobile/MobilePlatform.java

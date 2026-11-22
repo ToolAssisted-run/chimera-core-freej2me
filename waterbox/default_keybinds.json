@@ -1,6 +1,6 @@
 {
   "_comment": [
-    "The arrows are the host's arrow keys and Fire is Enter, the soft keys Q and W, the number keys the keypad's and the number row's, Star E and Pound R, Clear A, as in FreeJ2ME's own window. Touch is the host's left mouse button at the mouse's place."
+    "The arrows are the host's arrow keys and Fire is Enter, the soft keys Q and W, the number keys the keypad's and the number row's, Star E and Pound R, Clear A, as in FreeJ2ME's own window, and Send (the call key) S. Touch is the host's left mouse button at the mouse's place."
   ],
   "AllTrollers": {
     "J2ME Controls": {
@@ -24,7 +24,8 @@
       "Num 0": "Keypad0, Number0",
       "Pound": "R, KeypadDivide",
       "Clear": "A",
-      "Touch": "WMouse L"
+      "Touch": "WMouse L",
+      "Send": "S"
     }
   },
   "AllTrollersAutoFire": {

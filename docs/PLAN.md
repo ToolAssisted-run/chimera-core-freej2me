@@ -475,6 +475,56 @@ beside the x86-64 package. Requested in chimera#536.
   other). The core exports no GuestFaultHandler, so a host with 16 KiB pages
   does not refuse it for that.
 
+## 2026-11-22 - a Send key, the phone's call key (Chimera #638)
+
+A game being made into a tool-assisted run skips its dialogue when it is
+given key code -10 in `keyPressed`, which is what a Nokia sends for the green
+call key (Send). The core had no such button.
+
+- **The button**: "Send", mnemonic "S", default host key S. It is the last
+  button, after Touch, and not before it. A movie writes an entry by the
+  buttons' position, so putting Send before Touch would have turned every
+  Touch in a movie made earlier into a Send. At the end, a movie or project
+  made before this change replays as it did; a movie made after it has one
+  more column.
+- **The code it sends** (patch 0003, `Mobile.getMobileKey`, key 23; keys 20
+  to 22 are FreeJ2ME's own fast forward, rotate and pause hotkeys, so 23 is
+  the first free one). FreeJ2ME defines a call key for two of the Phone Keys
+  settings only:
+  - Standard, NokiaKeyboard, LG, Motorola, MotoTriplets, MotoV8, Sagem,
+    Siemens, KDDI and BlackBerry89: -10, the Nokia code. FreeJ2ME defines no
+    other code for them, and -10 is not one of their other keys' codes.
+  - SKT: 190 (`Canvas.KEY_CALL`, which FreeJ2ME defines for SKT).
+  - MotoA1000: nothing. Its left soft key is -10, so sending -10 would be
+    that key twice. The game is given no key at all.
+  No code is a game action (`getGameAction` gives 0), so the key does not
+  move anything in FreeJ2ME's own menus. Some real phones use another code
+  for Send (a Siemens phone's is -11, for one); it is not added where
+  FreeJ2ME does not say so.
+- **How it arrives** (`java/chimera/Frontend.java`): the key goes to
+  `keyPressed` when it goes down and `keyReleased` when it comes up, like the
+  others. It does not repeat while held: it has no slot among FreeJ2ME's
+  `pressedKeys`, which are for its own front ends' keys. End (the red key,
+  -11) is not added: on a real phone it closes the program.
+- **Tested**: the test MIDlet draws a square for each of -10 given to
+  `keyPressed`, -10 given to `keyReleased`, a game action given for -10 (which
+  must not happen) and 190. New tests `j2me:send` (Send gives green and cyan
+  and no red; Clear gives none) and `j2me:send-phones` (SKT gives 190 and
+  not -10; MotoA1000 gives nothing). `package:controls` now expects 22
+  buttons, Send last. Run on a machine with the package: the test script
+  passed 39 and skipped 5 (the commercial games, which are not here), and
+  the window test passed 2 and skipped 1. Broken on purpose once: with a
+  test MIDlet that looked for -11 instead of -10, `j2me:send` finds no
+  squares and fails.
+- **What a movie made before sees**: the pictures are the same. With all 21
+  old buttons pressed over 400 frames, the 10 picture digests match the
+  build before. The memory digests differ from the first report on (the
+  Java code changed) and the sound and lag counts differ by 1 to 3 frames
+  from frame 240 on, because the sandbox's clock counts the code the game
+  runs and the front end now runs a few more instructions each frame. A
+  movie holds the package's version and Chimera warns when it differs, as
+  for any change to the core.
+
 ## Not done
 
 - **Games** were run to their menus and a little further (above); none
