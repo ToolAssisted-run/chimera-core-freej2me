@@ -43,35 +43,41 @@ for line in io.lines(jobPath) do
 end
 meta.metaPath = job.meta
 
-if emu.getsystemid() ~= "J2ME" then
-	finish("ERROR", "wrong system id: " .. tostring(emu.getsystemid()))
-end
-if emu.getcorename() ~= "FreeJ2ME-Plus" then
-	finish("ERROR", "wrong core: " .. tostring(emu.getcorename()))
-end
-
-pcall(function() client.speedmode(6400) end)
-pcall(function() client.invisibleemulation(true) end)
-
-local frames = tonumber(job.frames) or 120
-for _ = 1, frames do
-	emu.frameadvance()
-end
-
-meta.frames = emu.framecount()
-meta.height = client.bufferheight()
-meta.width = client.bufferwidth()
-
-local DOMAIN = job.domain
-if DOMAIN ~= nil and DOMAIN ~= "" then
-	local ok, why = pcall(function()
-		memory.usememorydomain(DOMAIN)
-		meta.size = memory.getcurrentmemorydomainsize()
-		meta.hash = memory.hash_region(0, meta.size, DOMAIN)
-	end)
-	if not ok then
-		finish("ERROR", "memory domain " .. DOMAIN .. ": " .. tostring(why))
+-- the body runs under xpcall: an error in it ends the run with a report
+-- instead of leaving the window waiting
+local function body()
+	if emu.getcorename() ~= "FreeJ2ME-Plus" then
+		finish("ERROR", "wrong core: " .. tostring(emu.getcorename()))
 	end
+
+	pcall(function() client.speedmode(6400) end)
+	pcall(function() client.invisibleemulation(true) end)
+
+	local frames = tonumber(job.frames) or 120
+	for _ = 1, frames do
+		emu.frameadvance()
+	end
+
+	meta.frames = emu.framecount()
+	meta.height = client.bufferheight()
+	meta.width = client.bufferwidth()
+
+	local DOMAIN = job.domain
+	if DOMAIN ~= nil and DOMAIN ~= "" then
+		local ok, why = pcall(function()
+			memory.usememorydomain(DOMAIN)
+			meta.size = memory.getcurrentmemorydomainsize()
+			meta.hash = memory.hash_region(0, meta.size, DOMAIN)
+		end)
+		if not ok then
+			finish("ERROR", "memory domain " .. DOMAIN .. ": " .. tostring(why))
+		end
+	end
+
+	finish("OK", "")
 end
 
-finish("OK", "")
+local ok, err = xpcall(body, debug.traceback)
+if not ok then
+	finish("ERROR", (tostring(err):gsub("%s*\n%s*", " | ")))
+end
